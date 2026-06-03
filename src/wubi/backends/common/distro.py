@@ -20,12 +20,10 @@
 
 import os
 from .utils import read_file
+from .providers import get_provider
 import logging
-import re
 
 log = logging.getLogger('Distro')
-disk_info_re = r'''(?P<name>[\w\s-]+) (?P<version>[\w.]+)(?: LTS)?(?: (?:[\"\(])?(?P<codename>[\w\s-]+)(?:[\"\)])?)? - (?P<subversion>[\D]+)? (?P<arch>i386|amd64)(?:[\D]+)?(?P<build>[\d:.-]+)?'''
-disk_info_re = re.compile(disk_info_re)
 
 class Distro(object):
 
@@ -38,10 +36,11 @@ class Distro(object):
             metalink_md5sums, metalink_md5sums_signature,
             backend, ordering, website, support, min_disk_space_mb,
             min_memory_mb, installation_dir, diskimage=None, diskimage2=None,
-            min_iso_size=0, max_iso_size=0):
+            min_iso_size=0, max_iso_size=0, provider=None):
         self.name = name
         self.version = version
         self.arch = arch
+        self.provider = get_provider(provider)(self)
         self.kernel = os.path.normpath(kernel)
         self.initrd = os.path.normpath(initrd)
         self.md5sums = os.path.normpath(md5sums)
@@ -190,17 +189,4 @@ class Distro(object):
         log.debug("  parsing info from str=%s" % info)
         if not info:
             return
-        info = disk_info_re.match(info)
-        if info is None:
-            name = ""
-            version = ""
-            subversion = ""
-            arch = self.arch
-            log.debug("  parsed info=None")
-        else:
-            name = info.group('name').replace('-', ' ')
-            version = info.group('version')
-            subversion = info.group('subversion')
-            arch = info.group('arch')
-            log.debug("  parsed info=%s" % info.groupdict())
-        return name, version, subversion, arch
+        return self.provider.parse_info(info)
