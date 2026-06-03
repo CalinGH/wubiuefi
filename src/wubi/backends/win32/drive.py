@@ -51,13 +51,13 @@ class Drive(object):
 
     def get_filesystem(self):
         MAX_PATH = 255
-        if not hasattr(ctypes.windll.kernel32, "GetVolumeInformationA"):
+        if not hasattr(ctypes.windll.kernel32, "GetVolumeInformationW"):
             return ""
         filesystem = ""
         path = self.path[0] + ':\\'
-        buf = ctypes.create_string_buffer("", MAX_PATH)
-        ctypes.windll.kernel32.GetVolumeInformationA(path, None, 0, None, None, None, buf, len(buf))
-        if isinstance(buf.value, str):
+        buf = ctypes.create_unicode_buffer(MAX_PATH)
+        ctypes.windll.kernel32.GetVolumeInformationW(path, None, 0, None, None, None, buf, len(buf))
+        if buf.value:
             filesystem = buf.value.lower()
         return filesystem
 

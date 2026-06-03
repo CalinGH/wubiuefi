@@ -74,6 +74,7 @@ class WindowsBackend(Backend):
         drives = [(d.path[:2].lower(), d) for d in self.info.drives]
         self.info.drives_dict = dict(drives)
         self.info.efi = self.check_EFI()
+        self.info.bitlocker_drives = self.get_bitlocker_drives()
 
     def select_target_dir(self):
         target_dir = join_path(self.info.target_drive.path, self.info.distro.installation_dir)
@@ -569,7 +570,47 @@ class WindowsBackend(Backend):
                 efi = True
         log.debug('EFI boot = %s' % efi)
         return efi
-     
+
+    def get_bitlocker_drives(self):
+        '''
+        Return the set of drive letters (e.g. "C") whose BitLocker
+        protection is currently ON. Wubi modifies the boot configuration
+        (and, on EFI systems, the EFI System Partition) and writes the
+        virtual disk on the target volume; doing so on a protected drive can
+        trigger a BitLocker recovery prompt on the next boot, so we detect it
+        in order to warn the user.
+
+        Detection is best-effort: it relies on querying
+        Win32_EncryptableVolume (locale-independent integer ProtectionStatus)
+        and requires administrative rights. If the query cannot be performed
+        (no PowerShell, not elevated, BitLocker unsupported) an empty set is
+        returned and no warning is shown.
+        '''
+        bitlocker_drives = set()
+        command = [
+            'powershell.exe', '-NoProfile', '-NonInteractive',
+            '-ExecutionPolicy', 'Bypass', '-Command',
+            "Get-CimInstance -Namespace root/cimv2/security/microsoftvolumeencryption"
+            " -ClassName Win32_EncryptableVolume |"
+            " ForEach-Object { $_.DriveLetter + '=' + $_.ProtectionStatus }"]
+        try:
+            result = run_command(command)
+        except Exception as err:
+            log.info("Could not query BitLocker status: %s" % err)
+            return bitlocker_drives
+        for line in result.splitlines():
+            line = line.strip()
+            if '=' not in line:
+                continue
+            letter, _sep, status = line.partition('=')
+            letter = letter.strip().rstrip(':').upper()
+            status = status.strip()
+            # ProtectionStatus: 0 = off, 1 = on, 2 = unknown
+            if letter and status == '1':
+                bitlocker_drives.add(letter)
+        log.debug('BitLocker protected drives = %s' % sorted(bitlocker_drives))
+        return bitlocker_drives
+
     def modify_EFI_folder(self, associated_task,bcdedit):
         command = [bcdedit, '/enum', '{bootmgr}']
         boot_drive = run_command(command)

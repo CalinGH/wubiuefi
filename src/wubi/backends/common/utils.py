@@ -51,14 +51,35 @@ def spawn_command(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                stdout=stdout, startupinfo=startupinfo,
                                shell=False)
 
+def decode_output(data):
+    '''
+    Decode bytes captured from a subprocess into text. Windows console tools
+    emit their output in the OEM code page, so prefer that and fall back to a
+    permissive decode rather than raising on stray bytes.
+    '''
+    if not isinstance(data, bytes):
+        return data
+    encodings = []
+    try:
+        encodings.append('cp%d' % ctypes.windll.kernel32.GetConsoleOutputCP())
+    except Exception:
+        pass
+    encodings.append(sys.getfilesystemencoding() or 'utf-8')
+    for enc in encodings:
+        try:
+            return data.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return data.decode('latin-1', 'replace')
+
 def run_command(command, show_window=False):
     '''
     return stdout on success or raise error
     '''
     process = spawn_command(command, show_window=show_window)
     process.stdin.close()
-    output = process.stdout.read()
-    errormsg = process.stderr.read()
+    output = decode_output(process.stdout.read())
+    errormsg = decode_output(process.stderr.read())
     retval = process.wait()
     if retval == 0:
         return output

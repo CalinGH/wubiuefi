@@ -353,5 +353,27 @@ class InstallationPage(Page):
         self.info.locale = locale
         self.info.username = username
         self.info.password = password1
+        # Warn if BitLocker protection is on for the target or system drive:
+        # changing the Windows boot configuration (and, on EFI, the EFI System
+        # Partition) can trigger a BitLocker recovery prompt on the next boot.
+        bitlocker = getattr(self.info, 'bitlocker_drives', None) or set()
+        affected = []
+        for d in (drive, self.info.system_drive):
+            if d and d.path and d.path[0].upper() in bitlocker and d.path not in affected:
+                affected.append(d.path)
+        if affected:
+            message = _(
+                "BitLocker drive encryption is enabled on: %s.\n\n"
+                "Installing here changes the Windows boot configuration and "
+                "may trigger a BitLocker recovery prompt on the next reboot. "
+                "Make sure you have your BitLocker recovery key, or suspend "
+                "BitLocker protection before continuing (in an elevated "
+                "command prompt run: manage-bde -protectors -disable <drive>).\n\n"
+                "Do you want to continue anyway?") % ", ".join(affected)
+            if self.info.non_interactive:
+                log.warning(message.replace("\n", " "))
+            elif not self.frontend.ask_confirmation(message):
+                log.info("User cancelled installation after BitLocker warning")
+                return
         self.frontend.stop()
 
