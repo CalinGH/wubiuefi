@@ -88,6 +88,13 @@ install_python() {
     # The NuGet build ships a python3x._pth that disables site imports; remove
     # it so that site-packages (and therefore pip-installed packages) load.
     rm -f "$python_dir"/python*._pth
+    # Python 3.12's _wmi extension queries WMI via COM, which reaches
+    # propsys.dll.VariantToString -- unimplemented in the Wine versions shipped
+    # with Ubuntu, where the missing stub aborts the whole process (so it can't
+    # be caught in Python). The standard library's platform module already
+    # guards "import _wmi" with "except ImportError" and falls back to a
+    # WMI-free path, so removing the extension lets pip and PyInstaller run.
+    rm -f "$python_dir"/DLLs/_wmi.pyd
 }
 
 install_pip() {
