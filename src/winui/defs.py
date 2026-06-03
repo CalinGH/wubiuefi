@@ -23,6 +23,19 @@ win32 constants, structures and functions
 '''
 
 import ctypes
+import ctypes.wintypes
+
+# Historically this module (and winui.ui) reached the foreign-function helpers
+# through the ``ctypes.wintypes`` namespace, e.g. ``ctypes.wintypes.windll``.
+# Those names actually live on the top-level ``ctypes`` module, so expose them
+# on ``ctypes.wintypes`` for backwards compatibility instead of rewriting the
+# dozens of call sites. These attributes only exist on Windows (here: Wine).
+if not hasattr(ctypes.wintypes, "windll"):
+    ctypes.wintypes.windll = ctypes.windll
+if not hasattr(ctypes.wintypes, "WinError"):
+    ctypes.wintypes.WinError = ctypes.WinError
+if not hasattr(ctypes.wintypes, "WINFUNCTYPE"):
+    ctypes.wintypes.WINFUNCTYPE = ctypes.WINFUNCTYPE
 
 INT = ctypes.c_int
 WINVER = 1280

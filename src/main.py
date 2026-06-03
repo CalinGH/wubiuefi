@@ -20,14 +20,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# once compiled and packaged by pypack,
-# all dependencies will be in ./lib,
-# so let's add ./lib to the path
 import sys
 import os
-root_dir = os.path.abspath(os.path.dirname(__file__))
-lib_dir = os.path.join(root_dir, 'lib')
-sys.path.insert(0, lib_dir)
+
+if getattr(sys, 'frozen', False):
+    # Frozen by PyInstaller: bundled data (data, bin, winboot, translations)
+    # is extracted next to the interpreter in sys._MEIPASS.
+    root_dir = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+else:
+    # Running from source: dependencies live in ./lib next to main.py.
+    root_dir = os.path.abspath(os.path.dirname(__file__))
+    lib_dir = os.path.join(root_dir, 'lib')
+    sys.path.insert(0, lib_dir)
 
 from wubi.application import Wubi
 

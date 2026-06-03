@@ -12,21 +12,31 @@ all: build check
 build: wubi
 
 wubi: wubi-pre-build
-	PYTHONPATH=src tools/pywine -OO src/pypack/pypack --verbose --bytecompile --outputdir=build/wubi src/main.py data build/bin build/version.py build/winboot build/translations
-	PYTHONPATH=src tools/pywine -OO build/pylauncher/pack.py build/wubi
-	mv build/application.exe build/wubi.exe
+	tools/pywine -m PyInstaller --noconfirm --clean --log-level=WARN \
+		--distpath build --workpath build/pyinstaller wubi.spec
 
 wubizip: wubi-pre-build
-	PYTHONPATH=src tools/pywine src/pypack/pypack --verbose --outputdir=build/wubi src/main.py data build/bin build/version.py build/winboot build/translations
-	cp wine/drive_c/Python27/python.exe build/wubi #TBD
+	cp -a wine/drive_c/Python312 build/wubi/python
 	cd build; zip -r wubi.zip wubi
 
-wubi-pre-build: check_wine check_winboot pylauncher winboot2 src/main.py src/wubi/*.py cpuid version.py translations
+# Stage the application sources (plus the generated version.py) into
+# build/wubi/lib and the runtime resources into build/wubi/{data,bin,winboot,
+# translations}. This staging tree is the input consumed by PyInstaller (see
+# wubi.spec) and is also the layout exercised by the unit tests
+# (tests/test_backend.py).
+wubi-pre-build: check_wine check_winboot winboot2 src/main.py src/wubi/*.py cpuid version.py translations
 	rm -rf build/wubi
 	rm -rf build/bin
 	cp -a blobs build/bin
-	cp wine/drive_c/Python27/python27.dll build/pylauncher #TBD
 	cp build/cpuid/cpuid.dll build/bin
+	mkdir -p build/wubi/lib
+	cp src/main.py build/wubi/lib/main.py
+	cp build/version.py build/wubi/lib/version.py
+	for pkg in wubi winui openpgp bittorrent urlgrabber; do cp -a src/$$pkg build/wubi/lib/; done
+	cp -a data build/wubi/data
+	cp -a build/bin build/wubi/bin
+	cp -a build/winboot build/wubi/winboot
+	cp -a build/translations build/wubi/translations
 
 pot:
 	xgettext --default-domain="$(PACKAGE)" --output="po/$(PACKAGE).pot" $(shell find src/wubi -name "*.py" | sort)
@@ -57,19 +67,14 @@ translations: po/*.po
 	done
 
 version.py:
-	$(shell echo 'version = "$(VERSION)"' > build/version.py)
-	$(shell echo 'revision = $(REVISION)' >> build/version.py)
-	$(shell echo 'application_name = "$(PACKAGE)"' >> build/version.py)
-
-pylauncher: 7z src/pylauncher/*
-	cp -rf src/pylauncher build
-	cp "$(ICON)" build/pylauncher/application.ico
-	sed -i 's/application_name/$(PACKAGE)/' build/pylauncher/pylauncher.exe.manifest
-	cd build/pylauncher; make
+	mkdir -p build
+	echo 'version = "$(VERSION)"' > build/version.py
+	echo 'revision = $(REVISION)' >> build/version.py
+	echo 'application_name = "$(PACKAGE)"' >> build/version.py
 
 cpuid: src/cpuid/cpuid.c
 	cp -rf src/cpuid build
-	cd build/cpuid; make
+	cd build/cpuid && make
 
 winboot2:
 	mkdir -p build/winboot
@@ -117,11 +122,6 @@ grubutil: src/grubutil/grubinst/*
 	cp -rf src/grubutil build
 	cd build/grubutil/grubinst; make
 
-# not compiling 7z at the moment, but source is used by pylauncher
-7z: src/7z/C/*.c
-	mkdir -p build/7z
-	cp -rf src/7z build
-
 runbin: wubi
 	rm -rf build/test
 	mkdir build/test
@@ -156,4 +156,4 @@ distclean: clean
 	rm -rf shim
 
 .PHONY: all build test wubi wubizip wubi-pre-build pot runpy runbin check_wine check_winboot unittest
-	7z translations version.py pylauncher winboot winboot2 grubutil grub4dos clean distclean
+	translations version.py winboot winboot2 grubutil grub4dos clean distclean
