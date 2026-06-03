@@ -58,10 +58,10 @@ class BackendTests(unittest.TestCase):
                 self.fail('Did not expect key to be set: %s' % str(c[0]))
         for r in remove:
             calls.remove(r)
-        self.assert_(len(calls) == 0,
+        self.assertTrue(len(calls) == 0,
             'Did not set required registry keys:\n%s' % str(calls))
         # TODO mktempd
-        self.assert_(os.path.exists('/tmp/uninstall-wubi.exe'),
+        self.assertTrue(os.path.exists('/tmp/uninstall-wubi.exe'),
             'Did not install uninstaller binary.')
         os.remove('/tmp/uninstall-wubi.exe')
 

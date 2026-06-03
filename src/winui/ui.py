@@ -21,7 +21,7 @@
 Python wrappers around win32 widgets and window classes
 '''
 
-import defs
+from winui import defs
 import sys
 import os
 import ctypes

@@ -115,7 +115,7 @@ class InstallationPage(Page):
         target_drive = self.get_drive()
         self.size_list_gb = []
         self.size_list.clear()
-        i_size_list = range(1, 33) + [64, 128, 256, 512]
+        i_size_list = list(range(1, 33)) + [64, 128, 256, 512]
         if self.info.installation_size_mb:
             i = int(self.info.installation_size_mb/1000)
             if i not in i_size_list:
@@ -158,8 +158,7 @@ class InstallationPage(Page):
         self.on_distro_change()
 
     def populate_language_list(self):
-        languages = language2lang_country.keys()
-        languages.sort()
+        languages = sorted(language2lang_country.keys())
         for language in languages:
             self.language_list.add_item(language)
         language = lang_country2language.get(self.info.language, None)
