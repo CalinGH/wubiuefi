@@ -1,0 +1,55 @@
+name: Build wubi.exe
+
+# Builds the Windows installer (wubi.exe) under Wine on a Linux runner and
+# publishes it as a downloadable artifact. Run it from the Actions tab
+# ("Run workflow") or on pushes to modernize.
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "modernize" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          # Wine (32-bit Python runs under Wine) + a virtual X server for wineboot,
+          # the GRUB/shim/sbsign tooling used by winboot2, mingw for cpuid.dll,
+          # and gettext/zip for translations and packaging.
+          sudo apt-get install -y --no-install-recommends \
+            wine wine32 wine64 xvfb \
+            grub-pc-bin grub-efi-amd64-bin grub-efi-ia32-bin \
+            shim-signed sbsigntool openssl \
+            gcc-mingw-w64 binutils-mingw-w64 \
+            gettext zip wget xz-utils
+
+      - name: Build wubi.exe
+        env:
+          WINEDEBUG: "-all"
+          DISPLAY: ":99"
+        run: |
+          # check_wine/check_winboot are scripted and self-bootstrapping
+          # (they download the Wine Python 3.12 + PyInstaller and generate
+          # dummy Secure Boot keys). Run the whole build under a virtual X
+          # server so wineboot works headless.
+          xvfb-run -a make build
+
+      - name: Show build output
+        if: always()
+        run: ls -la build/ || true
+
+      - name: Upload wubi.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: wubi-exe
+          path: |
+            build/wubi.exe
+          if-no-files-found: error
+          retention-days: 14
