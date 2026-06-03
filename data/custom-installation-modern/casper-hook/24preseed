@@ -1,0 +1,87 @@
+#!/bin/sh
+#
+# Modern Wubi (24.04 "Noble"+) casper trigger.
+#
+# This is an OVERRIDE of casper's stock /scripts/casper-bottom/24preseed. Wubi
+# appends a tiny cpio archive containing this file to the casper initrd (see
+# WubiBackend.build_modern_initrd); because the kernel processes stacked initrd
+# archives in order, our copy replaces casper's and therefore runs in casper's
+# place - without needing any entry in casper-bottom/ORDER.
+#
+# Why not casper's normal preseed/early_command? On a 24.04 *desktop* live
+# system the debconf template database ships no debian-installer/* or preseed/*
+# templates, so casper-set-selections cannot register preseed/early_command and
+# the command is silently dropped. Overriding 24preseed sidesteps debconf
+# entirely.
+#
+# At this point in casper-bottom:
+#   * the live filesystem is mounted at /root
+#   * the host (Windows) partition holding the ISO + our payload is mounted at
+#     /isodevice (casper-premount/iso-scan mounts it there when booted with
+#     iso-scan/filename=...)
+#   * /cdrom is the (loop-mounted) ISO
+#
+# We only STAGE the installer here (the initramfs is a minimal busybox
+# environment); the real work runs later from install.sh via a systemd unit,
+# once the full live system is up.
+
+PREREQ=""
+prereqs () { echo "$PREREQ"; }
+case "$1" in
+    prereqs) prereqs; exit 0 ;;
+esac
+
+. /scripts/casper-functions 2>/dev/null || true
+
+# Partition-relative path to the staged payload, e.g.
+# /ubuntu/install/custom-installation. Passed by wubi on the kernel cmdline.
+CUSTOM_DIR=
+for x in $(cat /proc/cmdline); do
+    case "$x" in
+        wubi-custom-dir=*) CUSTOM_DIR="${x#wubi-custom-dir=}" ;;
+    esac
+done
+
+# Move the host partition into the live tree so it survives the pivot to /root
+# (casper-bottom/05mountpoints moves /cdrom but not /isodevice).
+ISODEV=
+if grep -q '^[^ ]* /isodevice ' /proc/mounts; then
+    ISODEV=$(awk '$2=="/isodevice"{print $1; exit}' /proc/mounts)
+    mkdir -p /root/isodevice
+    mount -n -o move /isodevice /root/isodevice 2>/dev/null || true
+fi
+
+# Locate the staged payload on the host partition (fall back to the ISO).
+SRC=
+if [ -n "$CUSTOM_DIR" ] && [ -d "/root/isodevice$CUSTOM_DIR" ]; then
+    SRC="/root/isodevice$CUSTOM_DIR"
+elif [ -n "$CUSTOM_DIR" ] && [ -d "/root/cdrom$CUSTOM_DIR" ]; then
+    SRC="/root/cdrom$CUSTOM_DIR"
+fi
+
+if [ -z "$SRC" ]; then
+    echo "wubi: could not find custom-installation payload ($CUSTOM_DIR)" > /dev/console 2>/dev/null
+    exit 0
+fi
+
+# Stage the installer into the live filesystem.
+mkdir -p /root/custom-installation
+cp -af "$SRC"/. /root/custom-installation/ 2>/dev/null || cp -af "$SRC"/* /root/custom-installation/
+
+# Record runtime facts the installer cannot easily rediscover after the pivot.
+{
+    echo "HOST_DEV=$ISODEV"
+    echo "CUSTOM_DIR=$CUSTOM_DIR"
+} > /root/custom-installation/runtime.conf
+
+# Install + enable the systemd unit that runs install.sh in the live session.
+if [ -f /root/custom-installation/wubi-install.service ]; then
+    mkdir -p /root/etc/systemd/system/multi-user.target.wants
+    cp /root/custom-installation/wubi-install.service \
+        /root/etc/systemd/system/wubi-install.service
+    ln -sf ../wubi-install.service \
+        /root/etc/systemd/system/multi-user.target.wants/wubi-install.service
+fi
+
+echo "wubi: staged installer from $SRC (host=$ISODEV)" > /dev/console 2>/dev/null
+exit 0

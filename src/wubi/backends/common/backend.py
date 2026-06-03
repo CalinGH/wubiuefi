@@ -75,8 +75,29 @@ class Backend(object):
     def get_installation_tasklist(self):
         self.cache_cd_path()
         dimage = self.info.distro.diskimage
+        install_method = getattr(self.info.distro.provider, 'install_method', None)
+        # Modern Ubuntu (24.04+) has no ubiquity/lupin: we ship a self-contained
+        # installer that runs in the live session and populates root.disk
+        # itself. Boot it via the casper preseed trigger (no automatic-ubiquity)
+        # and our modern install assets, leaving the legacy path untouched.
+        if install_method == 'diskimage-script':
+            tasks = [
+            Task(self.select_target_dir, description=_("Selecting the target directory")),
+            Task(self.create_dir_structure, description=_("Creating the installation directories")),
+            Task(self.uncompress_target_dir, description=_("Uncompressing files")),
+            Task(self.create_uninstaller, description=_("Creating the uninstaller")),
+            Task(self.copy_installation_files, description=_("Copying installation files")),
+            Task(self.get_iso, description=_("Retrieving installation files")),
+            Task(self.extract_kernel, description=_("Extracting the kernel")),
+            Task(self.choose_disk_sizes, description=_("Choosing disk sizes")),
+            Task(self.create_install_script_config, description=_("Configuring the installer")),
+            Task(self.build_modern_initrd, description=_("Preparing the boot image")),
+            Task(self.modify_bootloader, description=_("Adding a new bootloader entry")),
+            Task(self.modify_grub_configuration, description=_("Setting up installation boot menu")),
+            Task(self.eject_cd, description=_("Ejecting the CD")),
+            ]
         # don't use diskimage for a FAT32 target directory
-        if dimage and not self.cd_path and not self.iso_path and not self.info.target_drive.is_fat():
+        elif dimage and not self.cd_path and not self.iso_path and not self.info.target_drive.is_fat():
             tasks = [
             Task(self.select_target_dir,
                  description=_("Selecting the target directory")),
@@ -752,12 +773,130 @@ class Backend(object):
         preseed_file = join_path(self.info.custominstall, "preseed.cfg")
         write_file(preseed_file, content)
 
+    @staticmethod
+    def _newc_cpio(entries):
+        '''
+        Build a (newc / "070701") cpio archive in pure Python. `entries` is a
+        list of (path, mode, data) tuples; data is None for directories. This
+        lets wubi assemble the casper-hook overlay on Windows without any
+        external cpio/gzip tooling.
+        '''
+        def field(n):
+            return b"%08x" % (n & 0xffffffff)
+        out = []
+        ino = 1
+        for path, mode, data in entries:
+            is_dir = data is None
+            payload = b"" if is_dir else data
+            name = path.encode("ascii") + b"\0"
+            header = (b"070701"
+                + field(ino)              # ino
+                + field(mode)             # mode
+                + field(0) + field(0)     # uid, gid
+                + field(2 if is_dir else 1)  # nlink
+                + field(0)                # mtime
+                + field(len(payload))     # filesize
+                + field(0) + field(0)     # devmajor, devminor
+                + field(0) + field(0)     # rdevmajor, rdevminor
+                + field(len(name))        # namesize
+                + field(0))               # check
+            buf = header + name
+            buf += b"\0" * ((4 - len(buf) % 4) % 4)   # pad after name
+            buf += payload
+            buf += b"\0" * ((4 - len(buf) % 4) % 4)   # pad after data
+            out.append(buf)
+            ino += 1
+        trailer_name = b"TRAILER!!!\0"
+        trailer = (b"070701"
+                   + field(0)            # ino
+                   + field(0)            # mode
+                   + field(0) + field(0)  # uid, gid
+                   + field(1)            # nlink
+                   + field(0)            # mtime
+                   + field(0)            # filesize
+                   + field(0) + field(0)  # devmajor, devminor
+                   + field(0) + field(0)  # rdevmajor, rdevminor
+                   + field(len(trailer_name))
+                   + field(0)) + trailer_name
+        trailer += b"\0" * ((4 - len(trailer) % 4) % 4)
+        out.append(trailer)
+        return b"".join(out)
+
+    def build_modern_initrd(self):
+        '''
+        Modern Ubuntu (24.04+) casper trigger. Instead of preseed/early_command
+        (which silently fails on desktop ISOs - no debian-installer/preseed
+        debconf templates) we OVERRIDE casper-bottom/24preseed: a tiny cpio
+        archive carrying our hook is appended to the casper initrd. The kernel
+        processes stacked initrd archives in order, so our 24preseed replaces
+        casper's and stages the installer (see casper-hook/24preseed). The hook
+        is launched by the existing casper-bottom/ORDER entry, so no ORDER edit
+        is needed. install.sh then does the real work, configured by
+        create_install_script_config.
+        '''
+        hook_src = join_path(self.info.data_dir, 'custom-installation-modern',
+                             'casper-hook', '24preseed')
+        hook = read_file(hook_src)
+        if isinstance(hook, str):
+            hook = hook.encode('utf-8')
+        entries = [
+            ("scripts", 0o040755, None),
+            ("scripts/casper-bottom", 0o040755, None),
+            ("scripts/casper-bottom/24preseed", 0o100755, hook),
+        ]
+        overlay = self._newc_cpio(entries)
+        # Append the overlay to the casper initrd extracted by extract_kernel,
+        # keeping the (zstd-compressed) stock initrd intact and 4-byte aligned.
+        with open(self.info.initrd, 'rb') as f:
+            stock = f.read()
+        pad = (4 - len(stock) % 4) % 4
+        with open(self.info.initrd, 'wb') as f:
+            f.write(stock)
+            f.write(b"\0" * pad)
+            f.write(overlay)
+
+    def create_install_script_config(self):
+        '''
+        Write the key=value config consumed by the modern install.sh. This is
+        how the Windows-side choices (sizes, user, locale, ...) reach the
+        self-contained installer running in the live session.
+        '''
+        target_dir = '/' + unix_path(self.info.distro.installation_dir).strip('/')
+        install_dir = unix_path(self.info.install_dir)
+        # install_dir is an absolute host path (e.g. C:/ubuntu/install); keep the
+        # part below the drive so it is meaningful inside the live session.
+        install_dir = '/' + install_dir.split(':', 1)[-1].strip('/')
+        lines = [
+            "# Generated by Wubi - consumed by install.sh",
+            "TARGET_DIR=%s" % target_dir,
+            "INSTALL_DIR=%s" % install_dir,
+            "ROOT_SIZE_MB=%s" % int(self.info.root_size_mb or 0),
+            "SWAP_SIZE_MB=%s" % int(self.info.swap_size_mb or 0),
+            "USERNAME=%s" % self.info.username,
+            "USER_FULL_NAME=%s" % (self.info.user_full_name or self.info.username),
+            "PASSWORD=%s" % self.info.password,
+            "HOST_NAME=%s" % self.info.host_username.replace(' ', '-'),
+            "LOCALE=%s" % self.info.locale,
+            "KEYBOARD_LAYOUT=%s" % self.info.keyboard_layout,
+            "KEYBOARD_VARIANT=%s" % self.info.keyboard_variant,
+            "TIMEZONE=%s" % self.info.timezone,
+            "AUTO_REBOOT=true",
+            'SQUASH_LAYERS="%s"' % ' '.join(
+                os.path.basename(p)
+                for p in getattr(self.info.distro.provider, 'target_squashfs_layers', ())),
+            ]
+        config_file = join_path(self.info.custominstall, "config")
+        write_file(config_file, '\n'.join(lines) + '\n')
+
     def modify_bootloader(self):
         #platform specific
         pass
 
     def modify_grub_configuration(self):
-        template_file = join_path(self.info.data_dir, 'grub.install.cfg')
+        if getattr(self.info.distro.provider, 'install_method', None) == 'diskimage-script':
+            template_file = join_path(self.info.data_dir, 'grub.install.modern.cfg')
+        else:
+            template_file = join_path(self.info.data_dir, 'grub.install.cfg')
         template = read_file(template_file)
         if self.info.run_task == "cd_boot":
             isopath = ""
