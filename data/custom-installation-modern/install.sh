@@ -193,27 +193,65 @@ mount --bind /dev/pts "$TARGET/dev/pts"
 mount --bind /run "$TARGET/run"
 mount --bind "$CDROM" "$TARGET/cdrom"
 
-# Apply the loop-remount fix to the target initramfs BEFORE the kernel postinst
-# rebuilds the initrd, so the generated initrd can mount root from the loopback
-# file (busybox `mount -o loop` is unreliable in the initramfs).
-LOCAL="$TARGET/usr/share/initramfs-tools/scripts/local"
-if [ -f "$LOCAL" ]; then
-    oldv='mount ${roflag} -o loop -t ${FSTYPE} ${LOOPFLAGS} "/host/${LOOP#/}" '
-    newv='loopdev=`losetup -f`; losetup ${loopdev} "/host/${LOOP#/}"; mount ${roflag} -t ${FSTYPE} ${LOOPFLAGS} ${loopdev} '
-    if grep -qF "$oldv" "$LOCAL"; then
-        sed -i "s%$oldv%$newv%g" "$LOCAL"
-        log "applied loop-remount patch to target initramfs"
-    fi
-fi
+# Loop-boot support in the target initramfs. Two parts, both applied BEFORE the
+# kernel postinst builds the initrd:
+#
+#   (a) an /etc/initramfs-tools build hook (wubi-loop) that re-applies the fix on
+#       EVERY update-initramfs. /etc/initramfs-tools is config and is never
+#       overwritten by package upgrades, so the loop fix survives kernel and
+#       initramfs-tools updates - unlike a one-off edit of the stock script.
+#   (b) a one-off edit of the stock /usr/share script, so the very first initrd
+#       (built now by the kernel postinst) already has the fix even before the
+#       hook is consulted.
+#
+# The fix itself: replace busybox's unreliable `mount -o loop` of root.disk with
+# an explicit losetup + mount, and make sure the host (Windows) filesystem
+# drivers (ntfs3, vfat) are present so the partition holding root.disk can be
+# mounted at boot.
+oldv='mount ${roflag} -o loop -t ${FSTYPE} ${LOOPFLAGS} "/host/${LOOP#/}" '
+newv='loopdev=`losetup -f`; losetup ${loopdev} "/host/${LOOP#/}"; mount ${roflag} -t ${FSTYPE} ${LOOPFLAGS} ${loopdev} '
 
-# The loop-boot initramfs must mount the host (Windows) partition that holds
-# root.disk, so the host filesystem driver has to be in the initrd. Force-load
-# ntfs3 (and vfat, for FAT host volumes) before the kernel postinst builds it.
-mkdir -p "$TARGET/etc/initramfs-tools"
+# (a) durable build hook
+mkdir -p "$TARGET/etc/initramfs-tools/hooks"
+cat > "$TARGET/etc/initramfs-tools/hooks/wubi-loop" <<'HOOK'
+#!/bin/sh
+# Wubi loopback-root support. Re-applied on every update-initramfs so it
+# survives kernel / initramfs-tools package updates (see install.sh).
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in
+    prereqs) prereqs; exit 0 ;;
+esac
+. /usr/share/initramfs-tools/hook-functions
+
+# Host (Windows) filesystem drivers, so the partition holding root.disk mounts.
+manual_add_modules ntfs3
+manual_add_modules vfat
+
+# Reliable loop-mount of root.disk: losetup + mount instead of `mount -o loop`.
+LOCAL="${DESTDIR}/scripts/local"
+oldv='mount ${roflag} -o loop -t ${FSTYPE} ${LOOPFLAGS} "/host/${LOOP#/}" '
+newv='loopdev=`losetup -f`; losetup ${loopdev} "/host/${LOOP#/}"; mount ${roflag} -t ${FSTYPE} ${LOOPFLAGS} ${loopdev} '
+if [ -f "$LOCAL" ] && grep -qF "$oldv" "$LOCAL"; then
+    sed -i "s%$oldv%$newv%g" "$LOCAL"
+fi
+exit 0
+HOOK
+chmod 0755 "$TARGET/etc/initramfs-tools/hooks/wubi-loop"
+log "installed durable loop-boot initramfs hook"
+
+# Keep ntfs3/vfat in the always-load module list too (also under /etc, durable).
 for mod in ntfs3 vfat; do
     grep -qx "$mod" "$TARGET/etc/initramfs-tools/modules" 2>/dev/null \
         || echo "$mod" >> "$TARGET/etc/initramfs-tools/modules"
 done
+
+# (b) one-off edit of the stock script for the first build
+LOCAL="$TARGET/usr/share/initramfs-tools/scripts/local"
+if [ -f "$LOCAL" ] && grep -qF "$oldv" "$LOCAL"; then
+    sed -i "s%$oldv%$newv%g" "$LOCAL"
+    log "applied loop-remount patch to target initramfs"
+fi
 
 # ---------------------------------------------------------------------------
 # 6. Install a kernel (offline, from the ISO pool) + rebuild initramfs
