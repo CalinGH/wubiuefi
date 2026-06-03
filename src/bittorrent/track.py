@@ -1,13 +1,13 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from parseargs import parseargs, formatDefinitions
-from RawServer import RawServer
-from HTTPHandler import HTTPHandler
-from NatCheck import NatCheck
+from .parseargs import parseargs, formatDefinitions
+from .RawServer import RawServer
+from .HTTPHandler import HTTPHandler
+from .NatCheck import NatCheck
 from threading import Event
-from bencode import bencode, bdecode, Bencached
-from zurllib import urlopen, quote, unquote
+from .bencode import bencode, bdecode, Bencached
+from .zurllib import urlopen, quote, unquote
 from urllib.parse import urlparse
 from os import rename
 from os.path import exists, isfile
@@ -24,7 +24,7 @@ ListType = list
 DictType = dict
 
 import sys
-from __init__ import version
+from . import version
 
 defaults = [
     ('port', 80, "Port to listen on."),

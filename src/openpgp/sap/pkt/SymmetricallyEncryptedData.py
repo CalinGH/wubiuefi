@@ -11,7 +11,7 @@ encrypted or public key encrypted) precede the symmetrically encrypted
 data packet. The session key packets specify the symmetric algorithm
 used and hold the decryption key.
 """
-from Packet import Packet
+from .Packet import Packet
 
 class SymmetricallyEncryptedData(Packet):
     __doc__ = """Symmetrically Encrypted Data Packet

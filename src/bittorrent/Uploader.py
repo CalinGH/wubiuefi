@@ -1,7 +1,7 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from CurrentRateMeasure import Measure
+from .CurrentRateMeasure import Measure
 
 class Upload:
     def __init__(self, connection, choker, storage, 

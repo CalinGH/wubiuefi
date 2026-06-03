@@ -3,7 +3,7 @@
 Public subkey packets are just like public key packets, with one
 difference: they are subkeys.
 """
-from PublicKey import PublicKey, PublicKeyBody
+from .PublicKey import PublicKey, PublicKeyBody
 
 
 class PublicSubkey(PublicKey):

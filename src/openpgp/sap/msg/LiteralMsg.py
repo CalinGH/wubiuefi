@@ -1,7 +1,7 @@
 """Literal Messages
 """
 from openpgp.code import *
-from Msg import Msg
+from .Msg import Msg
 
 class LiteralMsg(Msg):
     """

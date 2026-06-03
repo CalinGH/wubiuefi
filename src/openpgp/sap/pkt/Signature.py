@@ -4,8 +4,8 @@ import binascii
 
 import openpgp.sap.util.strnum as STN
 
-from Packet import Packet
-import MPI
+from .Packet import Packet
+from . import MPI
 
 from openpgp.sap.exceptions import *
 from openpgp.code import *
@@ -397,7 +397,7 @@ def create_SignatureSubpacket(type, value):
         - ``SIGSUB_REVOCREASON``: tuple (integer code, string reason)
         - ``SIGSUB_SIGTARGET``: Not Implemented
     """
-    from Packet import create_NewLength
+    from .Packet import create_NewLength
 
     # set value_d
     if SIGSUB_SIGNERID == type:

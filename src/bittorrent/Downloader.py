@@ -1,10 +1,10 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from CurrentRateMeasure import Measure
+from .CurrentRateMeasure import Measure
 from random import shuffle
 from time import time
-from bitfield import Bitfield
+from .bitfield import Bitfield
 
 class SingleDownload:
     def __init__(self, downloader, connection):

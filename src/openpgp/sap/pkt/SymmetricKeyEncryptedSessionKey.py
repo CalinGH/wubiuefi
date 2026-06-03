@@ -23,9 +23,9 @@ symmetrically encrypted message directly.
 """
 import openpgp.sap.util.strnum as STN
 
-import S2K
+from . import S2K
 
-from Packet import Packet
+from .Packet import Packet
 
 # This is the first class I've encountered where the packet body
 # needs information from the packet header: if there are packets left

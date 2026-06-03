@@ -1,28 +1,28 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from zurllib import urlopen
+from .zurllib import urlopen
 from urllib.parse import urljoin
-from btformats import check_message
-from Choker import Choker
-from Storage import Storage
-from StorageWrapper import StorageWrapper
-from Uploader import Upload
-from Downloader import Downloader
-from Connecter import Connecter
-from Encrypter import Encoder
-from RawServer import RawServer
-from Rerequester import Rerequester
-from DownloaderFeedback import DownloaderFeedback
-from RateMeasure import RateMeasure
-from CurrentRateMeasure import Measure
-from PiecePicker import PiecePicker
-from bencode import bencode, bdecode
-from __init__ import version
+from .btformats import check_message
+from .Choker import Choker
+from .Storage import Storage
+from .StorageWrapper import StorageWrapper
+from .Uploader import Upload
+from .Downloader import Downloader
+from .Connecter import Connecter
+from .Encrypter import Encoder
+from .RawServer import RawServer
+from .Rerequester import Rerequester
+from .DownloaderFeedback import DownloaderFeedback
+from .RateMeasure import RateMeasure
+from .CurrentRateMeasure import Measure
+from .PiecePicker import PiecePicker
+from .bencode import bencode, bdecode
+from . import version
 from binascii import b2a_hex
 from hashlib import sha1 as sha
 from os import path, makedirs
-from parseargs import parseargs, formatDefinitions
+from .parseargs import parseargs, formatDefinitions
 from socket import error as socketerror
 from random import seed
 from threading import Thread, Event

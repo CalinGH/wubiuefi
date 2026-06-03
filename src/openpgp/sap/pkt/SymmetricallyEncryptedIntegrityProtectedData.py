@@ -20,7 +20,7 @@ packet's body of data after the encryption target cleartext message
     |--version--|-------------------encrypted data----------------------|
                 |--cleartext message--|--modification detection packet--|
 """
-from Packet import Packet
+from .Packet import Packet
 
 import openpgp.sap.util.strnum as STN
 

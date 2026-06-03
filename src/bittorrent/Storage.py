@@ -102,7 +102,7 @@ def lrange(a, b, c):
 
 # everything below is for testing
 
-from fakeopen import FakeOpen
+from .fakeopen import FakeOpen
 
 def test_Storage_simple():
     f = FakeOpen()

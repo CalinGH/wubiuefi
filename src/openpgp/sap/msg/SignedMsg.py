@@ -1,6 +1,6 @@
 "Signed Messages"
 
-from Msg import Msg
+from .Msg import Msg
 
 from openpgp.code import *
 from openpgp.sap.exceptions import *

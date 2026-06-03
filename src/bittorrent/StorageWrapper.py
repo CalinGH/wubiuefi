@@ -3,7 +3,7 @@
 
 from hashlib import sha1 as sha
 from threading import Event
-from bitfield import Bitfield
+from .bitfield import Bitfield
 
 def dummy_status(fractionDone = None, activity = None):
     pass

@@ -6,7 +6,7 @@ further interpreted."
 The term 'message' above does not refer to an OpenPGP message (10.2), but
 rather that message which OpenPGP signed, verified, encrypted, etc..
 """
-from Packet import Packet
+from .Packet import Packet
 import openpgp.sap.util.strnum as STN
 
 from openpgp.sap.exceptions import *

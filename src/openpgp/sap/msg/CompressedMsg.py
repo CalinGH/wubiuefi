@@ -2,7 +2,7 @@
 """
 from openpgp.sap.exceptions import *
 from openpgp.code import *
-from Msg import Msg
+from .Msg import Msg
 
 class CompressedMsg(Msg):
     """Compressed Message

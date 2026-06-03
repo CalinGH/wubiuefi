@@ -4,7 +4,7 @@ The marker packet is a dummy packet that must be ignored.
 
 Move along.
 """
-from Packet import Packet
+from .Packet import Packet
 
 class Marker(Packet):
     __doc__ = """Marker Packet

@@ -16,8 +16,8 @@ import openpgp.sap.util.strnum as STN
 from openpgp.code import *
 from openpgp.sap.exceptions import *
 
-import MPI
-from Packet import Packet
+from . import MPI
+from .Packet import Packet
 
 
 class PublicKey(Packet):

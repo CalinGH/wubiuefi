@@ -5,7 +5,7 @@ trust over a key. Right now this packet is recognized but not used
 for anything. Trust packets are not meant to be used outside a
 user's personal OpenPGP implementation.
 """
-from Packet import Packet
+from .Packet import Packet
 
 class Trust(Packet):
     __doc__ = """Trust Packet

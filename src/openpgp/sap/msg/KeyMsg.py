@@ -2,7 +2,7 @@
 
 from openpgp.code import *
 from openpgp.sap.exceptions import *
-from Msg import Msg
+from .Msg import Msg
 
 class PGPKeyMsgError(PGPError): pass
 class PGPBlockError(PGPError): pass

@@ -48,10 +48,10 @@ import optparse
 import getpass
 
 from openpgp.code import *
-from api import sign_str, verify_str, encrypt_str, decrypt_str
-from armory import looks_armored, list_armored, apply_armor
-from list import list_pkts
-from util.tool import slice_pkt_str, cat_pkt_str
+from .api import sign_str, verify_str, encrypt_str, decrypt_str
+from .armory import looks_armored, list_armored, apply_armor
+from .list import list_pkts
+from .util.tool import slice_pkt_str, cat_pkt_str
 
 sep = os.sep
 linesep = os.linesep

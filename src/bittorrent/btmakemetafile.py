@@ -8,9 +8,9 @@ from os.path import getsize, split, join, abspath, isdir
 from os import listdir
 from hashlib import sha1 as sha
 from copy import copy
-from BitTorrent.bencode import bencode
-from BitTorrent.btformats import check_info
-from BitTorrent.parseargs import parseargs, formatDefinitions
+from .bencode import bencode
+from .btformats import check_info
+from .parseargs import parseargs, formatDefinitions
 from threading import Event
 from time import time
 

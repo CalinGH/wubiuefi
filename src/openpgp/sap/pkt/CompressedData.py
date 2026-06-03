@@ -25,7 +25,7 @@ Decompressing Data
 """
 import zlib
 
-from Packet import Packet
+from .Packet import Packet
 from openpgp.code import *
 
 class CompressedData(Packet):

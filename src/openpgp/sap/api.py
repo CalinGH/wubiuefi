@@ -51,16 +51,16 @@ import openpgp.sap.text as TXT
 
 from openpgp.sap.exceptions import *
 
-from list import list_as_signed, list_msgs, find_keys, find_key_prefs, deliteralize
-from armory import looks_armored, list_armored, apply_armor
-from pkt.Packet import create_Packet
-from pkt.CompressedData import create_CompressedDataBody
-from pkt.Signature import Signature
-from pkt.Signature import create_SignatureSubpacket as create_SigSub
-from pkt.OnePassSignature import create_OnePassSignatureBody
-from msg.Msg import Msg
-from msg.LiteralMsg import create_LiteralMsg
-from util.strnum import hex2int
+from .list import list_as_signed, list_msgs, find_keys, find_key_prefs, deliteralize
+from .armory import looks_armored, list_armored, apply_armor
+from .pkt.Packet import create_Packet
+from .pkt.CompressedData import create_CompressedDataBody
+from .pkt.Signature import Signature
+from .pkt.Signature import create_SignatureSubpacket as create_SigSub
+from .pkt.OnePassSignature import create_OnePassSignatureBody
+from .msg.Msg import Msg
+from .msg.LiteralMsg import create_LiteralMsg
+from .util.strnum import hex2int
 
 # For the sake of a complete log, the loops don't terminate in case there is
 # more than one match.

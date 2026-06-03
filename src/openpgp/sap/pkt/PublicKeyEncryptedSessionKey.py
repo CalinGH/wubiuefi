@@ -9,11 +9,11 @@ the symmetrically encrypted data.
 """
 import openpgp.sap.util.strnum as STN
 
-import MPI
+from . import MPI
 
 from openpgp.code import *
 
-from Packet import Packet
+from .Packet import Packet
 
 
 class PublicKeyEncryptedSessionKey(Packet):

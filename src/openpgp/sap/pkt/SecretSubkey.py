@@ -4,7 +4,7 @@ Secret subkey packets are just like secret key packets, with one
 difference: they are subkeys.
 """
 
-from SecretKey import SecretKey, SecretKeyBody
+from .SecretKey import SecretKey, SecretKeyBody
 
 
 class SecretSubkey(SecretKey):

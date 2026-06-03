@@ -11,7 +11,7 @@ Example::
     >>> testbody._d
     'abc'
 """
-import Packet
+from . import Packet
 
 class TestPGP(Packet.Packet):
 

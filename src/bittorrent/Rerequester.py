@@ -1,9 +1,9 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from zurllib import urlopen, quote
-from btformats import check_peers
-from bencode import bdecode
+from .zurllib import urlopen, quote
+from .btformats import check_peers
+from .bencode import bdecode
 from threading import Thread, Lock
 from socket import error
 from time import time

@@ -3,7 +3,7 @@
 The modification detection code contains a SHA-1 hash of the plaintext
 in a decrypted symmetrically encrypted integrity protected packet.
 """
-from Packet import Packet
+from .Packet import Packet
 
 
 class ModificationDetectionCode(Packet):

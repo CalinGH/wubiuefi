@@ -3,7 +3,7 @@
 User attribute packets are more flexible versions of the user ID
 packet. Right now, they aren't used for anything.
 """
-from Packet import Packet
+from .Packet import Packet
 
 
 class UserAttribute(Packet):

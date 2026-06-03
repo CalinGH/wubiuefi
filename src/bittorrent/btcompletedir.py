@@ -7,7 +7,7 @@ from os.path import join, split
 from threading import Event
 from traceback import print_exc
 from sys import argv
-from BitTorrent.btmakemetafile import calcsize, make_meta_file, ignore
+from .btmakemetafile import calcsize, make_meta_file, ignore
 
 def dummy(x):
     pass

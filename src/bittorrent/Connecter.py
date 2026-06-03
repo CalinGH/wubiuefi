@@ -1,9 +1,9 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from bitfield import Bitfield
+from .bitfield import Bitfield
 from binascii import b2a_hex
-from CurrentRateMeasure import Measure
+from .CurrentRateMeasure import Measure
 
 def toint(s):
     return int(b2a_hex(s), 16)

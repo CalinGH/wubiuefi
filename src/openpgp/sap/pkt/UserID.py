@@ -8,7 +8,7 @@ name, but there are no restrictions on its content. The packet length in the
 header specifies the length of the User ID. If it is text, it is encoded in
 UTF-8."
 """
-from Packet import Packet
+from .Packet import Packet
 
 
 class UserID(Packet):

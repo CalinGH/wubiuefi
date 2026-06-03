@@ -8,7 +8,7 @@ pass."
 """
 import openpgp.sap.util.strnum as STN
 
-from Packet import Packet
+from .Packet import Packet
 from openpgp.sap.exceptions import *
 
 

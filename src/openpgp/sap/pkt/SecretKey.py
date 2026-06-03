@@ -29,10 +29,10 @@ The terms 'secret key' and 'private key' are interchangeable.
 # happened that s2k usage was flagged as 0, so all extra data in
 # the packet body was conceivably secret key data (at which point
 # things came to halt). 
-import MPI, S2K
+from . import MPI, S2K
 
 from openpgp.sap.util import strnum as STN
-from PublicKey import PublicKey, PublicKeyBody
+from .PublicKey import PublicKey, PublicKeyBody
 
 
 class SecretKey(PublicKey):

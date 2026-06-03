@@ -14,7 +14,7 @@ ASCII-armored block of data.
 import os
 import base64
 
-import util.strnum as STN
+from .util import strnum as STN
 
 from openpgp.code import *
 from openpgp.sap.exceptions import *

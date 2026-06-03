@@ -2,7 +2,7 @@
 
 from openpgp.code import *
 from openpgp.sap.exceptions import *
-from Msg import Msg
+from .Msg import Msg
 
 #Each target in the `targets` list is a
 #`SymmetricKeyEncryptedSessionKey` or `PublicKeyEncryptedSessionKey`

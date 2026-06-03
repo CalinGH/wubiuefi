@@ -13,7 +13,7 @@ from urllib.response import addinfourl
 from urllib.parse import quote, unquote
 from gzip import GzipFile
 from io import StringIO
-from __init__ import version
+from . import version
 import pprint
 
 

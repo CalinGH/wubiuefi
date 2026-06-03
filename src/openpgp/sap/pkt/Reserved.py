@@ -15,7 +15,7 @@ Example::
     >>> testbody._d
     'abc'
 """
-from Packet import Packet
+from .Packet import Packet
 
 
 class Reserved(Packet):
