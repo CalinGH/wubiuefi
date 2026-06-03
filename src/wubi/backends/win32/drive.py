@@ -36,7 +36,7 @@ class Drive(object):
         drive_path = letter.upper()
         if not drive_path.endswith(':'): drive_path += ':'
         self.path = drive_path
-        self.type_n = ctypes.windll.kernel32.GetDriveTypeW(unicode(drive_path))
+        self.type_n = ctypes.windll.kernel32.GetDriveTypeW(str(drive_path))
         self.type = [None, None, 'removable', 'hd', 'remote', 'cd', 'ram'][self.type_n] #TBD USB??
         if self.path == 'A:' and self.type == 'removable':
             self.type = None #skip floppy: TBD do something reasonble
@@ -67,7 +67,7 @@ class Drive(object):
         total = ctypes.c_int64()
         free = ctypes.c_int64()
         ctypes.windll.kernel32.GetDiskFreeSpaceExW(
-                unicode(drive_path),
+                str(drive_path),
                 ctypes.byref(freeuser),
                 ctypes.byref(total),
                 ctypes.byref(free))

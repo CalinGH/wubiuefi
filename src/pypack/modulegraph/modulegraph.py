@@ -534,7 +534,7 @@ class ModuleGraph(ObjectGraph):
         # wrapper for self.import_hook() that won't raise ImportError
         try:
             mods = self.import_hook(name, caller)
-        except ImportError, msg:
+        except ImportError as msg:
             self.msg(2, "ImportError:", str(msg))
             m = self.createNode(MissingModule, name)
             self.createReference(caller, m)
@@ -558,7 +558,7 @@ class ModuleGraph(ObjectGraph):
             if sm is None:
                 try:
                     sm = self.import_hook(name, caller, [sub])
-                except ImportError, msg:
+                except ImportError as msg:
                     self.msg(2, "ImportError:", str(msg))
                     sm = self.createNode(MissingModule, fullname)
                 else:
@@ -898,7 +898,7 @@ def main():
     import getopt
     try:
         opts, args = getopt.getopt(sys.argv[1:], "dgmp:qx:")
-    except getopt.error, msg:
+    except getopt.error as msg:
         print msg
         return
 

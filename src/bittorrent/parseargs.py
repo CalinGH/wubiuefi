@@ -66,7 +66,7 @@ def parseargs(argv, options, minargs = None, maxargs = None):
                     config[longname] = float(value)
                 else:
                     assert 0
-            except ValueError, e:
+            except ValueError as e:
                 usage('wrong format of --%s - %s' % (key, str(e)))
     for key, value in config.items():
         if value is None:

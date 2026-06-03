@@ -130,7 +130,7 @@ class Rerequester:
                             self.last = None
                 for x in peers:
                     self.connect((x[0], x[1]), x[2])
-        except ValueError, e:
+        except ValueError as e:
             if data != '':
                 self.errorfunc('bad data from tracker - ' + str(e))
 

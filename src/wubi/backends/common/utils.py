@@ -76,12 +76,14 @@ def run_nonblocking_command(command, show_window=False):
 
 def md5_password(password):
     # From http://mail.python.org/pipermail/python-list/2003-March/195202.html
-    salt_chars = './abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    salt = ''.join([random.choice(salt_chars) for i in range(5)])
+    if isinstance(password, str):
+        password = password.encode('utf-8')
+    salt_chars = b'./abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    salt = bytes(random.choice(salt_chars) for i in range(5))
 
     hash = hashlib.md5()
     hash.update(password)
-    hash.update('$1$')
+    hash.update(b'$1$')
     hash.update(salt)
 
     second_hash = hashlib.md5()
@@ -98,14 +100,14 @@ def md5_password(password):
     i = len(password)
     while i > 0:
         if i & 1:
-            hash.update('\0')
+            hash.update(b'\0')
         else:
-            hash.update(password[0])
+            hash.update(password[0:1])
         i >>= 1
 
     hash = hash.digest()
 
-    for i in xrange(1000):
+    for i in range(1000):
         nth_hash = hashlib.md5()
         if i % 2:
             nth_hash.update(password)
@@ -125,8 +127,8 @@ def md5_password(password):
     base64 = './0123456789' \
         'ABCDEFGHIJKLMNOPQRSTUVWXYZ' \
         'abcdefghijklmnopqrstuvwxyz'
-    def b64_three_char(char2, char1, char0, n):
-        byte2, byte1, byte0 = map(ord, [char2, char1, char0])
+    def b64_three_char(byte2, byte1, byte0, n):
+        # In Python 3 indexing a bytes object yields ints directly.
         w = (byte2 << 16) | (byte1 << 8) | byte0
         s = []
         for _ in range(n):
@@ -134,20 +136,20 @@ def md5_password(password):
             w >>= 6
         return s
 
-    result = ['$1$', salt, '$']
+    result = ['$1$', salt.decode('ascii'), '$']
     result.extend(b64_three_char(hash[0], hash[6], hash[12], 4))
     result.extend(b64_three_char(hash[1], hash[7], hash[13], 4))
     result.extend(b64_three_char(hash[2], hash[8], hash[14], 4))
     result.extend(b64_three_char(hash[3], hash[9], hash[15], 4))
     result.extend(b64_three_char(hash[4], hash[10], hash[5], 4))
-    result.extend(b64_three_char('\0', '\0', hash[11], 2))
+    result.extend(b64_three_char(0, 0, hash[11], 2))
 
     return ''.join(result)
 
 def get_file_hash(file_path, hash_name='md5', associated_task=None):
     if not file_path or not os.path.isfile(file_path):
         return
-    file_size = os.path.getsize(file_path)/(1024**2)
+    file_size = os.path.getsize(file_path)//(1024**2)
     if associated_task:
         associated_task.unit = "MB"
         associated_task.size = file_size
@@ -157,7 +159,7 @@ def get_file_hash(file_path, hash_name='md5', associated_task=None):
     for i in range(file_size + 1):
         data = file.read(1024**2)
         data_read += 1
-        if data == "":
+        if not data:
             break
         if associated_task:
             if associated_task.set_progress(data_read):
@@ -176,7 +178,7 @@ def get_drive_space(drive_path):
     total = ctypes.c_int64()
     free = ctypes.c_int64()
     ctypes.windll.kernel32.GetDiskFreeSpaceExW(
-            unicode(drive_path),
+            str(drive_path),
             ctypes.byref(freeuser),
             ctypes.byref(total),
             ctypes.byref(free))
@@ -201,7 +203,7 @@ def copy_file(source, target, associated_task=None):
     while True:
         data = source_file.read(1024**2)
         data_read += 1
-        if data == "":
+        if not data:
             break
         if associated_task:
             if associated_task.set_progress(data_read):
@@ -252,7 +254,7 @@ def replace_line_in_file(file_path, old_line, new_line):
             lines[i] = new_line
     try:
         f.writelines(lines)
-    except Exception, err:
+    except Exception as err:
         log.exception(err)
     f.close()
 

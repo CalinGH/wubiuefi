@@ -202,7 +202,7 @@ class Tracker:
                 if s != '':
                     i = s.index('=')
                     params[unquote(s[:i])] = unquote(s[i+1:])
-        except ValueError, e:
+        except ValueError as e:
             return (400, 'Bad Request', {'Content-Type': 'text/plain'}, 
                     'you sent me garbage - ' + str(e))
         if path == '' or path == 'index.html':
@@ -344,7 +344,7 @@ class Tracker:
             rsize = self.response_size
             if params.has_key('numwant'):
                 rsize = min(long(params['numwant']), self.max_give)
-        except ValueError, e:
+        except ValueError as e:
             return (400, 'Bad Request', {'Content-Type': 'text/plain'}, 
                 'you sent me garbage - ' + str(e))
         peers = self.downloads.setdefault(infohash, {})
@@ -490,7 +490,7 @@ def track(args):
         return
     try:
         config, files = parseargs(args, defaults, 0, 0)
-    except ValueError, e:
+    except ValueError as e:
         print 'error: ' + str(e)
         print 'run with no arguments for parameter explanations'
         return

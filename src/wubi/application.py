@@ -56,13 +56,13 @@ class Wubi(object):
             self.backend.remove_existing_binary()
             self.backend.fetch_basic_info()
             self.select_task()
-        except Exception, err:
+        except Exception as err:
             if self.info.quitting:
                 log.info("Quitting application")
             else:
                 log.exception(err)
                 if self.frontend:
-                    error_messages = "\n".join([e for e in err.args if isinstance(e, basestring)])
+                    error_messages = "\n".join([e for e in err.args if isinstance(e, str)])
                     self.frontend.show_error_message(_("An error occurred:\n\n%(error)s\n\nFor more information, please see the log file: %(log)s") % dict(error=error_messages, log=self.info.log_file))
             return
 
@@ -107,7 +107,7 @@ class Wubi(object):
         if self.frontend:
             return self.frontend
         if self.info.use_frontend:
-            raise NotImplemented
+            raise NotImplementedError
         else:
             Frontend = WindowsFrontend
         return Frontend(self)

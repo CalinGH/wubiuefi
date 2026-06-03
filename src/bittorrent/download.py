@@ -109,7 +109,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
                 config['url'] = args[0]
         if (config['responsefile'] == '') == (config['url'] == ''):
             raise ValueError, 'need responsefile or url'
-    except ValueError, e:
+    except ValueError as e:
         errorfunc('error: ' + str(e) + '\nrun with no args for parameter explanations')
         return
     
@@ -120,7 +120,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
             h = urlopen(config['url'])
         response = h.read()
         h.close()
-    except IOError, e:
+    except IOError as e:
         if config['responsefile'] != '' and config['responsefile'].find('Temporary Internet Files') != -1:
             errorfunc('BitTorrent was passed a filename that doesn\'t exist.  ' +
                 'Either clear your Temporary Internet Files or right-click the link ' + 
@@ -132,7 +132,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
     try:
         response = bdecode(response)
         check_message(response)
-    except ValueError, e:
+    except ValueError as e:
         errorfunc("got bad file info - " + str(e))
         return
     
@@ -182,7 +182,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
                     n = path.join(n, i)
                 files.append((n, x['length']))
                 make(n)
-    except OSError, e:
+    except OSError as e:
         errorfunc("Couldn't allocate dir - " + str(e))
         return
     
@@ -201,7 +201,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
     try:
         try:
             storage = Storage(files, open, path.exists, path.getsize)
-        except IOError, e:
+        except IOError as e:
             errorfunc('trouble accessing files - ' + str(e))
             return
         def finished(finfunc = finfunc, finflag = finflag, 
@@ -224,9 +224,9 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
             config['download_slice_size'], pieces, 
             info['piece length'], finished, failed, 
             statusfunc, doneflag, config['check_hashes'], data_flunked)
-    except ValueError, e:
+    except ValueError as e:
         failed('bad data - ' + str(e))
-    except IOError, e:
+    except IOError as e:
         failed('IOError - ' + str(e))
     if doneflag.isSet():
         return
@@ -236,7 +236,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
         try:
             rawserver.bind(listen_port, config['bind'])
             break
-        except socketerror, e:
+        except socketerror as e:
             pass
     else:
         errorfunc("Couldn't listen - " + str(e))

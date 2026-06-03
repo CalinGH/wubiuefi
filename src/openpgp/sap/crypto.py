@@ -290,7 +290,7 @@ def sign(sigtype, target, signer, *args, **kwords):
 
     try:
         seckey = decrypt_secret_key(signer, passphrase)[0] # only need first key
-    except PGPFormatError, m:
+    except PGPFormatError as m:
         raise PGPFormatError("%s -check the decryption passphrase-" % m)
 
 

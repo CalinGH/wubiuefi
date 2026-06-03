@@ -85,7 +85,7 @@ class BasicWindow(object):
         if not self.__class__._window_class_name_:
             self.__class__._window_class_name_ = self.__class__.__name__
             if icon:
-                self._icon = ctypes.wintypes.windll.user32.LoadImageW(defs.NULL, unicode(icon, 'mbcs'), defs.IMAGE_ICON, 0, 0, defs.LR_LOADFROMFILE);
+                self._icon = ctypes.wintypes.windll.user32.LoadImageW(defs.NULL, str(icon), defs.IMAGE_ICON, 0, 0, defs.LR_LOADFROMFILE);
             self._register_window()
         self._create_window(x, y, width, height, text)
         self._register_handlers()
@@ -118,8 +118,8 @@ class BasicWindow(object):
             text = ""
         self._hwnd = defs.CreateWindowEx(
             self._window_ex_style_,
-            unicode(self._window_class_name_),
-            unicode(text),
+            str(self._window_class_name_),
+            str(text),
             self._window_style_,
             x, y, width, height,
             hwnd,
@@ -228,11 +228,11 @@ class Window(BasicWindow):
         buffer_max_len = 999
         buffer = (ctypes.c_wchar * buffer_max_len)()
         if ctypes.wintypes.windll.user32.GetWindowTextW(self._hwnd, ctypes.byref(buffer), buffer_max_len):
-            return unicode(buffer.value)
+            return str(buffer.value)
 
     def set_text(self, text):
         old_text = self.get_text()
-        if not ctypes.wintypes.windll.user32.SetWindowTextW(self._hwnd, unicode(text)):
+        if not ctypes.wintypes.windll.user32.SetWindowTextW(self._hwnd, str(text)):
             raise ctypes.wintypes.WinError()
         if old_text and old_text.rstrip() != text.rstrip():
             # without update, text is displayed on top of old text when background is transparent
@@ -255,7 +255,7 @@ class Window(BasicWindow):
             0, # CLIP_DEFAULT_PRECIS clipping precision
             0, # NONANTIALIASED_QUALITY output quality
             0, #0x20, DEFAULT_PITCH | FF_DONTCARE # pitch and family
-            unicode(family) #TEXT("Verdana") # typeface name
+            str(family) #TEXT("Verdana") # typeface name
             )
         self._gdi_disposables.append(font)
         self._send_message(defs.WM_SETFONT, font, True)
@@ -408,23 +408,23 @@ class Frontend(object):
     def show_error_message(self, message, title=None):
         if not title:
             title = self.get_title()
-        ctypes.wintypes.windll.user32.MessageBoxW(self.main_window._hwnd, unicode(message), unicode(title), defs.MB_OK|defs.MB_ICONERROR)
+        ctypes.wintypes.windll.user32.MessageBoxW(self.main_window._hwnd, str(message), str(title), defs.MB_OK|defs.MB_ICONERROR)
 
     def show_info_message(self, message, title=None):
         if not title:
             title = self.get_title()
-        ctypes.wintypes.windll.user32.MessageBoxW(self.main_window._hwnd, unicode(message), unicode(title), defs.MB_OK|defs.MB_ICONINFORMATION)
+        ctypes.wintypes.windll.user32.MessageBoxW(self.main_window._hwnd, str(message), str(title), defs.MB_OK|defs.MB_ICONINFORMATION)
 
     def ask_confirmation(self, message, title=None):
         if not title:
             title = self.get_title()
-        result = ctypes.wintypes.windll.user32.MessageBoxW(self.main_window._hwnd, unicode(message), unicode(title), defs.MB_YESNO|defs.MB_ICONQUESTION)
+        result = ctypes.wintypes.windll.user32.MessageBoxW(self.main_window._hwnd, str(message), str(title), defs.MB_YESNO|defs.MB_ICONQUESTION)
         return result == defs.IDYES
 
     def ask_to_retry(self, message, title=None):
         if not title:
             title = self.get_title()
-        result = ctypes.wintypes.windll.user32.MessageBoxW(self.main_window._hwnd, unicode(message), unicode(title), defs.MB_RETRYCANCEL)
+        result = ctypes.wintypes.windll.user32.MessageBoxW(self.main_window._hwnd, str(message), str(title), defs.MB_RETRYCANCEL)
         return result == defs.IDRETRY
 
 class MainWindow(Window):
@@ -488,7 +488,7 @@ class Tab(Widget):
     def add_item(self, title, child, position=0):
         item = defs.TCITEM()
         item.mask = defs.TCIF_TEXT | defs.TCIF_PARAM
-        item.pszText = unicode(title)
+        item.pszText = str(title)
         item.lParam = child._hwnd
         #~ self.InsertItem(index, item)
         #~ self._ResizeChild(child)
@@ -504,7 +504,7 @@ class ListBox(Widget):
     _window_style_ = Widget._window_style_  | defs.WS_TABSTOP
 
     def add_item(self, text):
-        self._send_message(defs.LB_ADDSTRING, 0, unicode(text))
+        self._send_message(defs.LB_ADDSTRING, 0, str(text))
 
 class ComboBox(Widget):
     _window_class_name_ = "COMBOBOX" #"ComboBoxEx32"
@@ -515,10 +515,10 @@ class ComboBox(Widget):
             self.on_change()
 
     def set_value(self, value):
-        self._send_message(defs.CB_SELECTSTRING, -1, unicode(value)) # CB_SETCURSEL, value, 0)
+        self._send_message(defs.CB_SELECTSTRING, -1, str(value)) # CB_SETCURSEL, value, 0)
 
     def add_item(self, text):
-        self._send_message(defs.CB_ADDSTRING, 0, unicode(text))
+        self._send_message(defs.CB_ADDSTRING, 0, str(text))
 
     def clear(self):
         self._send_message(defs.CB_RESETCONTENT, 0, 0)

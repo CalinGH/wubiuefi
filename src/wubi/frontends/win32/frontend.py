@@ -138,4 +138,4 @@ class WindowsFrontend(ui.Frontend):
         if isinstance(tasklist.error, Exception):
             raise tasklist.error
         elif isinstance(tasklist.error, tuple):
-            raise tasklist.error[0], tasklist.error[1], tasklist.error[2]
+            raise tasklist.error[1].with_traceback(tasklist.error[2])

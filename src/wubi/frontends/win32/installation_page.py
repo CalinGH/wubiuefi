@@ -28,7 +28,7 @@ import gettext
 
 log = logging.getLogger("WinuiInstallationPage")
 
-reserved_usernames = [unicode(n) for n in reserved_usernames]
+reserved_usernames = [str(n) for n in reserved_usernames]
 re_username_first = re.compile("^[a-z]")
 re_username = re.compile("[a-z][-a-z0-9_]*$")
 
@@ -39,7 +39,7 @@ class InstallationPage(Page):
             parent,
             left, top + 6, 32, 32)
         picture.set_image(
-            os.path.join(unicode(str(self.info.image_dir), 'mbcs'), unicode(str(bmp), 'mbcs')))
+            os.path.join(str(self.info.image_dir), str(bmp)))
         label = ui.Label(
             parent,
             left + 32 + 10, top, 150, 12,
@@ -273,10 +273,10 @@ class InstallationPage(Page):
             self.info.distro = self.info.distros_dict.get((distro_name.lower(), 'i386'))
         self.frontend.set_title(_("%s Installer") % self.info.distro.name)
         bmp_file = "%s-header.bmp" % self.info.distro.name
-        self.header.image.set_image(os.path.join(unicode(str(self.info.image_dir), 'mbcs'), unicode(str(bmp_file), 'mbcs')))
+        self.header.image.set_image(os.path.join(str(self.info.image_dir), str(bmp_file)))
         self.header.title.set_text(_("You are about to install %(distro)s-%(version)s") % dict(distro=self.info.distro.name, version=self.info.version))
         icon_file = "%s.ico" % self.info.distro.name
-        self.frontend.set_icon(os.path.join(unicode(str(self.info.image_dir), 'mbcs'), unicode(str(icon_file), 'mbcs')))
+        self.frontend.set_icon(os.path.join(str(self.info.image_dir), str(icon_file)))
         if not self.info.skip_memory_check:
             if self.info.total_memory_mb < self.info.distro.min_memory_mb:
                 message = _("%(min_memory)sMB of memory are required for installation.\nOnly %(total_memory)sMB are available.\nThe installation may fail in such circumstances.\nDo you wish to continue anyway?")
@@ -295,7 +295,7 @@ class InstallationPage(Page):
         language4 = language3 and language3.split('.')[0]
         language5 = language4 and language4.split('_')[0]
         translation = gettext.translation(self.info.application_name, localedir=self.info.translations_dir, languages=[language1, language2, language3, language4, language5])
-        translation.install(unicode=True, names=[ngettext])
+        translation.install(names=[ngettext])
 
     def on_drive_change(self):
         self.info.target_drive = self.get_drive()

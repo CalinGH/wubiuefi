@@ -152,6 +152,6 @@ if __name__ == '__main__':
             config, args = parseargs(argv[3:], defaults, 0, 0)
             make_meta_file(argv[1], argv[2], config['piece_size_pow2'], progress = prog,
                 comment = config['comment'], target = config['target'])
-        except ValueError, e:
+        except ValueError as e:
             print 'error: ' + str(e)
             print 'run with no args for parameter explanations'

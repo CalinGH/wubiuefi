@@ -213,7 +213,7 @@ def find_encrypted_msg(pkts):
             else:
                 raise PGPMessageWarning("No encrypted data followed session keys.")
 
-        except IndexError, AttributeError:
+        except IndexError as AttributeError:
             raise PGPMessageWarning("Encrypted message is missing critical packets.")
     
     return None, pkts
@@ -374,7 +374,7 @@ def find_signed_msg(pkts):
                     sigmsg._seq.append(leftovers[0])
                     return sigmsg, leftovers[1:]
 
-            except IndexError, AttributeError: # catch non-existent leftovers[0].tag.type
+            except IndexError as AttributeError: # catch non-existent leftovers[0].tag.type
                 pgpwarn(PGPMessageWarning, "Dismissing one-pass signed message: missing trailing signature.")
 
         # ..otherwise abort

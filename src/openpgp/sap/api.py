@@ -114,7 +114,7 @@ def decrypt_msg(encmsg, **kw):
                     clrmsg = CRYPT.decrypt(encmsg.encrypted, passphrase, sespkt, keypkt)
                     break
 
-                except PGPCryptoError, m:
+                except PGPCryptoError as m:
                     errmsg = m
 
     if encsym and not clrmsg: # no need to duplicate decryption
@@ -125,7 +125,7 @@ def decrypt_msg(encmsg, **kw):
                 clrmsg = CRYPT.decrypt(encmsg.encrypted, passphrase, sespkt)
                 break
 
-            except PGPCryptoError, m:
+            except PGPCryptoError as m:
                 errmsg = m
 
     if clrmsg: # (should go together without question)

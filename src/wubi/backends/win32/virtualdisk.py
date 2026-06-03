@@ -45,7 +45,7 @@ def create_virtual_disk(path, size_mb):
 
     # Create file
     file_handle = defs.CreateFileW(
-        unicode(path),
+        str(path),
         defs.GENERIC_READ | defs.GENERIC_WRITE,
         0,
         defs.NULL,

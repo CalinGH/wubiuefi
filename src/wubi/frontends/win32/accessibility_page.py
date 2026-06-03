@@ -45,7 +45,7 @@ class AccessibilityPage(Page):
 
         #visibility aids
         h=30
-        w = (self.width - h*7)/2
+        w = (self.width - h*7)//2
 
         self.main.visibility_group = ui.GroupBox(self.main, h, h*1, w+h*2, h*6 - 10, text=_("Visibility Aids"))
         self.main.visibility1_button = ui.RadioButton(self.main, h*2, h*2, w, h, text = _("Visibility1"))

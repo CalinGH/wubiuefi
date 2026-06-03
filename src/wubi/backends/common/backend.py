@@ -28,7 +28,7 @@ import time
 import gettext
 import glob
 import shutil
-import ConfigParser
+import configparser as ConfigParser
 import btdownloader
 import downloader
 import subprocess
@@ -70,7 +70,7 @@ class Backend(object):
         if self.info.locale:
             locale.setlocale(locale.LC_ALL, self.info.locale)
             log.debug('user defined locale = %s' % self.info.locale)
-        gettext.install(self.info.application_name, localedir=self.info.translations_dir, unicode=True, names=['ngettext'])
+        gettext.install(self.info.application_name, localedir=self.info.translations_dir, names=['ngettext'])
 
     def get_installation_tasklist(self):
         self.cache_cd_path()
@@ -351,14 +351,12 @@ class Backend(object):
         Sort urls by preference giving a "boost" to the urls in the
         same country as the client
         '''
-        def cmp(x, y):
-            return y.score - x.score #reverse order
         urls = list(urls)
         for url in urls:
             url.score = url.preference
             if self.info.country == url.location:
                 url.score += 50
-        urls.sort(cmp)
+        urls.sort(key=lambda u: u.score, reverse=True) #reverse order
         return urls
 
     def cache_cd_path(self):
@@ -461,13 +459,13 @@ class Backend(object):
             url = self.info.distro.metalink_url
             metalink = downloader.download(url, self.info.install_dir, web_proxy=self.info.web_proxy)
             base_url = os.path.dirname(url)
-        except Exception, err:
+        except Exception as err:
             log.error("Cannot download metalink file %s err=%s" % (url, err))
             try:
                 url = self.info.distro.metalink_url2
                 metalink = downloader.download(url, self.info.install_dir, web_proxy=self.info.web_proxy)
                 base_url = os.path.dirname(url)
-            except Exception, err:
+            except Exception as err:
                 log.error("Cannot download metalink file2 %s err=%s" % (url, err))
                 return
         metalink_filename, metalink_extension = os.path.splitext(metalink)
@@ -573,7 +571,7 @@ class Backend(object):
             self.info.iso_path = join_path(self.info.install_dir, "installation.iso")
             try:
                 extract_iso(self.cd_path, self.info.iso_path)
-            except Exception, err:
+            except Exception as err:
                 log.error(err)
                 self.info.cd_path = None
                 self.info.iso_path = None
@@ -803,7 +801,7 @@ class Backend(object):
         log.debug("Deleting %s" % self.info.previous_target_dir)
         try:
             rm_tree(self.info.previous_target_dir)
-        except OSError, e:
+        except OSError as e:
             if e.errno == 22:
                 log.exception('Unable to remove the target directory.')
                 # Invalid argument - likely a corrupt file.
@@ -875,14 +873,7 @@ class Backend(object):
             kargs['backend'] = self
             distros.append(Distro(**kargs))
             #order is lost in configparser, use the ordering attribute
-        def compfunc(x, y):
-            if x.ordering == y.ordering:
-                return 0
-            elif x.ordering > y.ordering:
-                return 1
-            else:
-                return -1
-        distros.sort(compfunc)
+        distros.sort(key=lambda d: d.ordering)
         return distros
 
     def run_previous_uninstaller(self):

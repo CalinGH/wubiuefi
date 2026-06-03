@@ -64,7 +64,7 @@ class PublicKeyMsg(KeyMsg):
                         self.add_subblock(block)
                         idx += len(block.seq())
 
-                except IndexError, BlockLeaderError:
+                except IndexError as BlockLeaderError:
                     pass
             else:
                 raise PGPKeyMsgError("First block to key message must be primary or secret key.")

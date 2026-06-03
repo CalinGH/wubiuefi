@@ -51,7 +51,7 @@ class Graph(object):
                 elif cols == 3:
                     for head, tail, data in edges:
                         self.add_edge(head, tail, data)
-        except Exception, exc:
+        except Exception as exc:
             raise GraphError('%s -> Cannot create graph from edges=%s' %
                 (exc, edges))
 

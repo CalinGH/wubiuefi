@@ -95,7 +95,7 @@ from grabber import URLGrabError, CallbackObject, DEBUG
 
 try:
     from i18n import _
-except ImportError, msg:
+except ImportError as msg:
     def _(st): return st
 
 class GrabRequest:
@@ -395,7 +395,7 @@ class MirrorGroup:
             if DEBUG: DEBUG.info('MIRROR: trying %s -> %s', url, fullurl)
             try:
                 return func_ref( *(fullurl,), **kwargs )
-            except URLGrabError, e:
+            except URLGrabError as e:
                 if DEBUG: DEBUG.info('MIRROR: failed')
                 obj = CallbackObject()
                 obj.exception = e

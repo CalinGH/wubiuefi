@@ -392,12 +392,12 @@ auth_handler = urllib2.HTTPBasicAuthHandler( \
 
 try:
     from i18n import _
-except ImportError, msg:
+except ImportError as msg:
     def _(st): return st
 
 try:
     from httplib import HTTPException
-except ImportError, msg:
+except ImportError as msg:
     HTTPException = None
 
 try:
@@ -406,7 +406,7 @@ try:
     import keepalive
     from keepalive import HTTPHandler, HTTPSHandler
     have_keepalive = True
-except ImportError, msg:
+except ImportError as msg:
     have_keepalive = False
 
 try:
@@ -415,7 +415,7 @@ try:
     from byterange import HTTPRangeHandler, HTTPSRangeHandler, \
          FileRangeHandler, FTPRangeHandler, range_tuple_normalize, \
          range_tuple_to_header, RangeError
-except ImportError, msg:
+except ImportError as msg:
     range_handlers = ()
     RangeError = None
     have_range = 0
@@ -560,7 +560,7 @@ class URLGrabError(IOError):
 
     You can use these error codes like so:
       try: urlgrab(url)
-      except URLGrabError, e:
+      except URLGrabError as e:
          if e.errno == 3: ...
            # or
          print e.strerror
@@ -686,7 +686,7 @@ class URLParser:
                 user_pass, host = host.split('@', 1)
                 if ':' in user_pass:
                     user, password = user_pass.split(':', 1)
-            except ValueError, e:
+            except ValueError as e:
                 raise URLGrabError(1, _('Bad URL: %s') % url)
             if DEBUG: DEBUG.info('adding HTTP auth: %s, %s', user, password)
             auth_handler.add_password(None, host, user, password)
@@ -845,11 +845,11 @@ class URLGrabber:
                 r = apply(func, (opts,) + args, {})
                 if DEBUG: DEBUG.info('success')
                 return r
-            except URLGrabError, e:
+            except URLGrabError as e:
                 exception = e
                 callback = opts.failure_callback
                 retrycode = e.errno
-            except KeyboardInterrupt, e:
+            except KeyboardInterrupt as e:
                 exception = e
                 callback = opts.interrupt_callback
 
@@ -1171,24 +1171,24 @@ class URLGrabberFileObject:
             else:
                 fo = opener.open(req)
             hdr = fo.info()
-        except ValueError, e:
+        except ValueError as e:
             raise URLGrabError(1, _('Bad URL: %s') % (e, ))
-        except RangeError, e:
+        except RangeError as e:
             raise URLGrabError(9, str(e))
-        except urllib2.HTTPError, e:
+        except urllib2.HTTPError as e:
             new_e = URLGrabError(14, str(e))
             new_e.code = e.code
             new_e.exception = e
             raise new_e
-        except IOError, e:
+        except IOError as e:
             if hasattr(e, 'reason') and have_socket_timeout and \
                    isinstance(e.reason, TimeoutError):
                 raise URLGrabError(12, _('Timeout: %s') % (e, ))
             else:
                 raise URLGrabError(4, _('IOError: %s') % (e, ))
-        except OSError, e:
+        except OSError as e:
             raise URLGrabError(5, _('OSError: %s') % (e, ))
-        except HTTPException, e:
+        except HTTPException as e:
             raise URLGrabError(7, _('HTTP Exception (%s): %s') % \
                             (e.__class__.__name__, e))
         else:
@@ -1249,11 +1249,11 @@ class URLGrabberFileObject:
             else:           readamount = min(amt, self._rbufsize)
             try:
                 new = self.fo.read(readamount)
-            except socket.error, e:
+            except socket.error as e:
                 raise URLGrabError(4, _('Socket Error: %s') % (e, ))
-            except TimeoutError, e:
+            except TimeoutError as e:
                 raise URLGrabError(12, _('Timeout: %s') % (e, ))
-            except IOError, e:
+            except IOError as e:
                 raise URLGrabError(4, _('IOError: %s') %(e,))
             newsize = len(new)
             if not newsize: break # no more to read
@@ -1387,11 +1387,11 @@ def _main_test():
                                                         default_grabber.bandwidth)
 
     try: from progress import text_progress_meter
-    except ImportError, e: pass
+    except ImportError as e: pass
     else: kwargs['progress_obj'] = text_progress_meter()
 
     try: name = apply(urlgrab, (url, filename), kwargs)
-    except URLGrabError, e: print e
+    except URLGrabError as e: print e
     else: print 'LOCAL FILE:', name
 
 
@@ -1409,7 +1409,7 @@ def _retry_test():
         kwargs[k] = int(v)
 
     try: from progress import text_progress_meter
-    except ImportError, e: pass
+    except ImportError as e: pass
     else: kwargs['progress_obj'] = text_progress_meter()
 
     def cfunc(filename, hello, there='foo'):
@@ -1427,7 +1427,7 @@ def _retry_test():
 
     kwargs['checkfunc'] = (cfunc, ('hello',), {'there':'there'})
     try: name = apply(retrygrab, (url, filename), kwargs)
-    except URLGrabError, e: print e
+    except URLGrabError as e: print e
     else: print 'LOCAL FILE:', name
 
 def _file_object_test(filename=None):

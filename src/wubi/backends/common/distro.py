@@ -24,7 +24,7 @@ import logging
 import re
 
 log = logging.getLogger('Distro')
-disk_info_re = '''(?P<name>[\w\s-]+) (?P<version>[\w.]+)(?: LTS)?(?: (?:[\"\(])?(?P<codename>[\w\s-]+)(?:[\"\)])?)? - (?P<subversion>[\D]+)? (?P<arch>i386|amd64)(?:[\D]+)?(?P<build>[\d:.-]+)?'''
+disk_info_re = r'''(?P<name>[\w\s-]+) (?P<version>[\w.]+)(?: LTS)?(?: (?:[\"\(])?(?P<codename>[\w\s-]+)(?:[\"\)])?)? - (?P<subversion>[\D]+)? (?P<arch>i386|amd64)(?:[\D]+)?(?P<build>[\d:.-]+)?'''
 disk_info_re = re.compile(disk_info_re)
 
 class Distro(object):
@@ -65,7 +65,7 @@ class Distro(object):
         self.diskimage = diskimage
         self.diskimage2 = diskimage2
 
-        if isinstance(files_to_check, basestring):
+        if isinstance(files_to_check, str):
             files_to_check = [
                 os.path.normpath(f.strip().lower())
                 for f in files_to_check.split(',')]
@@ -146,7 +146,7 @@ class Distro(object):
             try:
                 info = read_file(info_file)
                 info = self.parse_isoinfo(info)
-            except Exception, err:
+            except Exception as err:
                 log.error(err)
                 return
             Distro.cache[(cd_or_iso_path, self.info_file)] = info

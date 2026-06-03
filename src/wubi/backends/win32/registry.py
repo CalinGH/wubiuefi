@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import _winreg
+import winreg as _winreg
 import logging
 log = logging.getLogger("registry")
 
@@ -46,7 +46,7 @@ def set_value(key, subkey, attr, value):
     try:
         log.debug("Setting registry key %s %s %s %s" % (key, subkey, attr, value))
         _winreg.SetValueEx(handle, attr, 0, 1, value)
-    except Exception, err:
+    except Exception as err:
         log.exception("Cannot set registry key %s\\%s = %s\n%s" % (subkey, attr, value, err))
     _winreg.CloseKey(handle)
 
@@ -54,5 +54,5 @@ def delete_key(key, subkey):
     key = getattr(_winreg, key)
     try:
         _winreg.DeleteKey(key, subkey)
-    except Exception, err:
+    except Exception as err:
         log.exception("Cannot delete registry key %s\n%s" % (subkey, err))

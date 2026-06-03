@@ -42,13 +42,13 @@ class Page(ui.Page):
         language2 = language1 and language1.split('_')[0]
         log.info("appname=%s, localedir=%s, languages=%s",self.info.application_name, self.info.translations_dir, [language1, language2])
         translation = gettext.translation(self.info.application_name, localedir=self.info.translations_dir, languages=[language1, language2, "en_US", "en"])
-        translation.install(unicode=True, names=['ngettext'])
+        translation.install(names=['ngettext'])
     def insert_vertical_image(self, bmp_file):
         self.vertical_image = ui.Bitmap(
             self,
             0, 0, 164, 314)
         self.vertical_image.set_image(
-            os.path.join(unicode(str(self.info.image_dir), 'mbcs'), unicode(str(bmp_file), 'mbcs')))
+            os.path.join(str(self.info.image_dir), str(bmp_file)))
         self.vertical_image.width = 164
 
     def insert_header(self, title, subtitle, bmp_file):
@@ -65,7 +65,7 @@ class Page(ui.Page):
                 self.header,
                 0, 0, hbw, hbh)
             self.header.image.set_image(
-                os.path.join(unicode(str(self.info.image_dir), 'mbcs'), unicode(str(bmp_file), 'mbcs')))
+                os.path.join(str(self.info.image_dir), str(bmp_file)))
         if title:
             self.header.title = ui.Label(
                 self.header,

@@ -20,7 +20,7 @@
 
 import sys
 import os
-import _winreg
+import winreg as _winreg
 import ctypes
 #import platform
 from drive import Drive
@@ -93,7 +93,7 @@ class WindowsBackend(Backend):
             run_command(command)
             command = ['compact', join_path(self.info.target_dir,'*.*'), '/U', '/A', '/F']
             run_command(command)
-        except Exception, err:
+        except Exception as err:
             log.error(err)
 
     def uncompress_files(self, associated_task):
@@ -105,7 +105,7 @@ class WindowsBackend(Backend):
             log.debug(" ".join(command))
             try:
                 run_command(command)
-            except Exception, err:
+            except Exception as err:
                 log.error(err)
 
     def create_uninstaller(self, associated_task):
@@ -154,7 +154,6 @@ class WindowsBackend(Backend):
             '\n\nThe system will now reboot.')
         msg = msg % join_path(self.info.install_dir, 'installation-logs.zip')
         msg = "msg=\"%s\"" % msg
-        msg = str(msg.encode('utf8'))
         replace_line_in_file(dest, 'msg=', msg)
         src = join_path(self.info.image_dir, self.info.distro.name + '.ico')
         dest = self.info.icon
@@ -362,13 +361,13 @@ class WindowsBackend(Backend):
 
     def get_windows_username(self):
         windows_username = os.getenv('username')
-        windows_username = windows_username.decode('ascii', 'ignore')
+        windows_username = windows_username.encode('ascii', 'ignore').decode('ascii')
         log.debug('windows_username=%s' % windows_username)
         return windows_username
 
     def get_windows_user_full_name(self):
         user_full_name = os.getenv('username') #TBD
-        user_full_name = user_full_name.decode('ascii', 'ignore')
+        user_full_name = user_full_name.encode('ascii', 'ignore').decode('ascii')
         log.debug('user_full_name=%s' % user_full_name)
         return user_full_name
 
@@ -378,7 +377,7 @@ class WindowsBackend(Backend):
         user_directory = ""
         if homedrive and homepath:
             user_directory = join_path(homedrive, homepath)
-            user_directory = user_directory.decode('ascii', 'ignore')
+            user_directory = user_directory.encode('ascii', 'ignore').decode('ascii')
         log.debug('user_directory=%s' % user_directory)
         return user_directory
 
@@ -430,7 +429,7 @@ class WindowsBackend(Backend):
         command = [self.info.iso_extractor, 'e', '-i!' + file_path, '-o' + output_dir, iso_path]
         try:
             run_command(command)
-        except Exception, err:
+        except Exception as err:
             log.exception(err)
             output_file = None
         if output_file and isfile(output_file):
@@ -449,8 +448,8 @@ class WindowsBackend(Backend):
         dec_xz_subp.stdout.close()
         dec_tar_subp.communicate()
         if dec_tar_subp.returncode != 0:
-            raise Exception, ('Extraction failed with code: %d' %
-                              dec_tar_subp.returncode)
+            raise Exception('Extraction failed with code: %d' %
+                            dec_tar_subp.returncode)
         # TODO: Checksum: http://tukaani.org/xz/xz-file-format.txt
         # Only remove downloaded image
         if not self.info.dimage_path:
@@ -519,7 +518,7 @@ class WindowsBackend(Backend):
         command = [self.info.iso_extractor,'l',iso_path]
         try:
             output = run_command(command)
-        except Exception, err:
+        except Exception as err:
             log.exception(err)
             log.debug('command >>%s' % ' '.join(command))
             output = None
@@ -619,7 +618,7 @@ class WindowsBackend(Backend):
         if os.path.exists(bootmgfw):
             f=open(bootmgfw, 'rb')
             s=f.read(2)
-            if s=='MZ':
+            if s==b'MZ':
                 f.seek(60)
                 s=f.read(4)
                 header_offset=struct.unpack("<L", s)[0]
@@ -652,7 +651,7 @@ class WindowsBackend(Backend):
                 log.debug('Removing EFI folder %s' % dest)
                 shutil.rmtree(dest)
             run_command(['mountvol', efi_drive, '/d'])
-        except Exception, err: #this shouldn't be fatal
+        except Exception as err: #this shouldn't be fatal
             log.error(err)            
         return
 
@@ -688,7 +687,7 @@ class WindowsBackend(Backend):
             self.undo_EFI_folder(associated_task)
             try:
                 run_command(['powercfg', '/h', 'on'])
-            except Exception, err: #this shouldn't be fatal
+            except Exception as err: #this shouldn't be fatal
                 log.error(err)
 
     def modify_bootini(self, drive, associated_task):
@@ -704,7 +703,7 @@ class WindowsBackend(Backend):
         dest = join_path(drive.path, 'wubildr.mbr')
         shutil.copyfile(src,  dest)
         run_command(['attrib', '-R', '-S', '-H', bootini])
-        boot_line = 'C:\wubildr.mbr = "%s"' % self.info.distro.name
+        boot_line = r'C:\wubildr.mbr = "%s"' % self.info.distro.name
         old_line = boot_line[:boot_line.index("=")].strip().lower()
         # ConfigParser gets confused by the ':' and changes the options order
         content = read_file(bootini)
@@ -733,7 +732,7 @@ class WindowsBackend(Backend):
         if not os.path.isfile(bootini):
             return
         run_command(['attrib', '-R', '-S', '-H', bootini])
-        remove_line_in_file(bootini, 'c:\wubildr.mbr', ignore_case=True)
+        remove_line_in_file(bootini, r'c:\wubildr.mbr', ignore_case=True)
         run_command(['attrib', '+R', '+S', '+H', bootini])
 
     def modify_configsys(self, drive, associated_task):
@@ -812,7 +811,7 @@ class WindowsBackend(Backend):
             efi_path = self.modify_EFI_folder(associated_task,bcdedit)
             try:
                 run_command(['powercfg', '/h', 'off'])
-            except Exception, err: #this shouldn't be fatal
+            except Exception as err: #this shouldn't be fatal
                 log.error(err)
             command = [bcdedit, '/copy', '{bootmgr}', '/d', '%s' % self.info.distro.name]
             id = run_command(command)
@@ -822,7 +821,7 @@ class WindowsBackend(Backend):
                 run_command([bcdedit, '/set', '{fwbootmgr}', 'displayorder', id, '/addlast'])
                 run_command([bcdedit, '/set', '{fwbootmgr}', 'timeout', '10'])
                 run_command([bcdedit, '/set', '{fwbootmgr}', 'bootsequence', id])
-            except Exception, err: #this shouldn't be fatal
+            except Exception as err: #this shouldn't be fatal
                 log.error(err)
             registry.set_value(
                 'HKEY_LOCAL_MACHINE',
@@ -896,7 +895,7 @@ class WindowsBackend(Backend):
                 self.info.registry_key,
                 'VistaBootDrive',
                 "")
-        except Exception, err: #this shouldn't be fatal
+        except Exception as err: #this shouldn't be fatal
             log.error(err)
 
     def get_arch(self):

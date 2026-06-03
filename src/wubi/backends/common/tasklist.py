@@ -195,7 +195,7 @@ class Task(object):
             result = None
             try:
                 result = self.associated_function(*self.associated_function_args, **self.associated_function_kargs)
-            except Exception, err:
+            except Exception as err:
                 self.error = sys.exc_info()
                 self.status = Task.FAILED
                 log.exception(err)
@@ -419,7 +419,7 @@ def test():
         associated_task.add_subtask(fsleep, "fsleepsub2")
 
     def callback(task, message):
-        print message, task._get_weight(), task._get_completed(), task.weight, task.size, task.completed
+        print(message, task._get_weight(), task._get_completed(), task.weight, task.size, task.completed)
 
     tasks = [
         Task(fsleep, "fsleep1"),

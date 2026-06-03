@@ -116,18 +116,18 @@ class MetalinkHandler(xml.sax.handler.ContentHandler):
         # Some elements are processed here (most after the end element, see below)
         if self._elements == ['metalink', 'files', 'file']:
             self._file = MetalinkFile()
-            if attrs.has_key('name'):
+            if 'name' in attrs:
                 self._file.name = attrs['name']
         elif self._elements == ['metalink', 'files', 'file', 'resources']:
-            if attrs.has_key('maxconnections'):
+            if 'maxconnections' in attrs:
                 try:
                     self._file.maxconnections = int(attrs['maxconnections'])
                 except:
                     pass # Ignore this if it can't be parsed
         elif self._elements == ['metalink', 'files', 'file', 'verification', 'pieces']:
-            if attrs.has_key('type'):
+            if 'type' in attrs:
                 self._file.piece_type = attrs['type']
-            if attrs.has_key('length'):
+            if 'length' in attrs:
                 try:
                     self._file.piece_length = int(attrs['length'])
                 except:
@@ -148,14 +148,14 @@ class MetalinkHandler(xml.sax.handler.ContentHandler):
         elif self._elements == ['metalink', 'files', 'file', 'resources', 'url']:
             url = MetalinkUrl()
             url.url = content
-            if attrs.has_key('type'): url.type = attrs['type']
-            if attrs.has_key('location'): url.location = attrs['location']
-            if attrs.has_key('maxconnections'):
+            if 'type' in attrs: url.type = attrs['type']
+            if 'location' in attrs: url.location = attrs['location']
+            if 'maxconnections' in attrs:
                 try:
                     url.maxconnections = int(attrs['maxconnections'])
                 except:
                     pass # Ignore this if it's not a number
-            if attrs.has_key('preference'):
+            if 'preference' in attrs:
                 try:
                     url.preference = int(attrs['preference'])
                 except:
@@ -178,19 +178,19 @@ class MetalinkHandler(xml.sax.handler.ContentHandler):
             self._file.os = content
         elif self._elements == ['metalink', 'files', 'file', 'verification', 'hash']:
             # The hash must have a type, otherwise it will be ignored.
-            if attrs.has_key('type'):
+            if 'type' in attrs:
                 hash = MetalinkHash()
                 hash.type = attrs['type']
                 hash.hash = content
                 self._file.hashes.append(hash)
         elif self._elements == ['metalink', 'files', 'file', 'verification', 'pieces', 'hash']:
-            if attrs.has_key('piece'):
+            if 'piece' in attrs:
                 self._pieces[attrs['piece']] = content
         elif self._elements == ['metalink', 'files', 'file', 'verification', 'pieces']:
             # Add all the pieces in the right order (starting at index "0")
             for i in range(len(self._pieces)):
                 # If this piece is missing, then skip all the pieces
-                if not self._pieces.has_key(str(i)):
+                if str(i) not in self._pieces:
                     self._file.piece_hashes = []
                     break
                 # If it does exist, then add it
