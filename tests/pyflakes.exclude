@@ -1,4 +1,16 @@
 *:*: undefined name '_'
+*:*: undefined name 'ngettext'
 src/main.py:*: redefinition of unused 'application_name' from line *
 src/main.py:*: redefinition of unused 'version' from line *
 src/main.py:*: redefinition of unused 'revision' from line *
+# Pre-existing, intentional or harmless findings (re-export __init__ modules,
+# locale-data duplicate keys, side-effect-only imports):
+src/wubi/frontends/win32/cd_menu_page.py:*: local variable 'used' is assigned to but never used
+src/wubi/frontends/win32/__init__.py:*: 'frontend.WindowsFrontend' imported but unused
+src/wubi/backends/common/downloader.py:*: 'encodings.utf_8' imported but unused
+src/wubi/backends/common/__init__.py:*: 'backend.Backend' imported but unused
+src/wubi/backends/common/signature.py:*: 'openpgp.sap.pkt.Trust' imported but unused
+src/wubi/backends/common/mappings.py:*: dictionary key 'Ndebele (ZA)' repeated with different values
+src/wubi/backends/common/mappings.py:*: dictionary key 'Tigrinya (ER)' repeated with different values
+src/wubi/backends/common/btdownloader.py:*: 'gzip' imported but unused
+src/wubi/backends/win32/__init__.py:*: 'backend.WindowsBackend' imported but unused

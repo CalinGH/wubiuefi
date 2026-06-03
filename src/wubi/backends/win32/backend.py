@@ -20,7 +20,6 @@
 
 import sys
 import os
-import winreg as _winreg
 import ctypes
 #import platform
 from drive import Drive

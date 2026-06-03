@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+
+jobs:
+  python3-static-checks:
+    name: Python 3 static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tools
+        run: python -m pip install --upgrade pyflakes
+
+      # Guard against Python 2 regressions: every tracked .py file under
+      # src/ and tests/ must compile under Python 3 with no SyntaxError and
+      # no SyntaxWarning (e.g. invalid escape sequences). The application
+      # itself can only be built/run under Wine on Windows, so this is the
+      # portable gate we can enforce in CI.
+      - name: Compile check (no SyntaxError / SyntaxWarning)
+        run: |
+          python - <<'PY'
+          import py_compile, subprocess, sys
+          files = subprocess.check_output(
+              ['find', 'src', 'tests', '-name', '*.py']).decode().split()
+          issues = []
+          for f in files:
+              try:
+                  py_compile.compile(f, doraise=True)
+              except py_compile.PyCompileError as e:
+                  issues.append('FAIL %s: %s' % (f, str(e).splitlines()[-1]))
+          import warnings
+          warnings.simplefilter('error', SyntaxWarning)
+          for f in files:
+              try:
+                  py_compile.compile(f, doraise=True)
+              except SyntaxWarning as e:
+                  issues.append('WARN %s: %s' % (f, e))
+              except py_compile.PyCompileError:
+                  pass
+          print('checked %d files, %d issue(s)' % (len(files), len(issues)))
+          for i in issues:
+              print(i)
+          sys.exit(1 if issues else 0)
+          PY
+
+      # Lint the first-party application code (src/wubi, src/winui) with the
+      # project's filtered pyflakes wrapper. The vendored third-party trees
+      # (openpgp, bittorrent, urlgrabber, pypack, ...) are intentionally not
+      # linted here: they compile under Python 3 but still carry many benign
+      # upstream warnings.
+      - name: pyflakes (first-party code)
+        run: python tests/run-pyflakes src/wubi src/winui
