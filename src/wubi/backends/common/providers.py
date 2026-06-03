@@ -134,4 +134,41 @@ class UbuntuProvider(DistroProvider):
             match.group('arch'))
 
 
+@register_provider
+class UbuntuModernProvider(UbuntuProvider):
+    '''
+    Modern Ubuntu (24.04 LTS "Noble" and newer). The release dropped the
+    ubiquity installer and the lupin loopback patches in favour of the
+    subiquity / ubuntu-desktop-provision installer, which cannot install into
+    a loopback file. Wubi therefore performs the install itself (a
+    self-contained "diskimage" installer running in the live session that
+    populates root.disk), rather than driving the distribution installer.
+
+    The live filesystem is also no longer a single casper/filesystem.squashfs
+    but a set of overlay layers under casper/. The installed system is the
+    non-live layers overlaid in order; the ".live" layer (which carries the
+    live session / installer) is intentionally excluded.
+
+    The .disk/info metadata format is unchanged, so identification is
+    inherited from UbuntuProvider.
+    '''
+
+    name = 'ubuntu-modern'
+
+    default_kernel = 'casper/vmlinuz'
+    default_initrd = 'casper/initrd'
+    # Presence of these layers marks a valid modern Ubuntu desktop image.
+    default_files_to_check = 'casper/minimal.squashfs,casper/minimal.standard.squashfs'
+    # No debconf preseed; the install is script-driven.
+    default_preseed_template = None
+    install_method = 'diskimage-script'
+
+    #: squashfs layers (in overlay order) that make up the *installed* system.
+    #: The live-only overlay (``*.live.squashfs``) is deliberately omitted.
+    target_squashfs_layers = (
+        'casper/minimal.squashfs',
+        'casper/minimal.standard.squashfs',
+    )
+
+
 DEFAULT_PROVIDER = 'ubuntu'
