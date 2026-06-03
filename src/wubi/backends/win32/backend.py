@@ -139,7 +139,12 @@ class WindowsBackend(Backend):
 
     def copy_installation_files(self, associated_task):
         self.info.custominstall = join_path(self.info.install_dir, 'custom-installation')
-        src = join_path(self.info.data_dir, 'custom-installation')
+        # Modern Ubuntu (24.04+) ships a different, self-contained installer
+        # payload; the legacy lupin payload is unused there.
+        if getattr(self.info.distro.provider, 'install_method', None) == 'diskimage-script':
+            src = join_path(self.info.data_dir, 'custom-installation-modern')
+        else:
+            src = join_path(self.info.data_dir, 'custom-installation')
         dest = self.info.custominstall
         log.debug('Copying %s -> %s' % (src, dest))
         shutil.copytree(src, dest)

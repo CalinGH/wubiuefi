@@ -1,0 +1,19 @@
+[Unit]
+Description=Wubi self-contained diskimage installer (24.04+)
+DefaultDependencies=no
+After=local-fs.target systemd-tmpfiles-setup.service
+Wants=local-fs.target
+ConditionPathExists=/custom-installation/install.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# The payload (including install.sh) is staged into /custom-installation by the
+# casper-bottom/24preseed override (see casper-hook/24preseed).
+ExecStart=/bin/sh /custom-installation/install.sh
+StandardOutput=journal+console
+StandardError=journal+console
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
