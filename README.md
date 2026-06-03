@@ -1,65 +1,122 @@
 # WubiUEFI
 
+Wubi is the **Windows Ubuntu Installer**. It installs Ubuntu inside a single
+file on an existing Windows (NTFS) partition, so no CD burning or repartitioning
+is required, yet the result is a real dual-boot setup. WubiUEFI is the fork that
+adds UEFI/Secure Boot support and support for recent Ubuntu releases.
 
-## Introduction
+For background see the wiki: https://github.com/hakuna-m/wubiuefi/wiki
 
-Wubi is the Windows Ubuntu Installer. Wubi installs Ubuntu inside a file within a windows partition, and thus it does not require CD burning or dedicated partitions, yet the installation is a dual boot setup identical to a normal installation.
+> **Status of this branch.** The codebase has been migrated to **Python 3**, the
+> Windows executable is now produced with **PyInstaller**, and support for
+> **modern Ubuntu (24.04 "Noble" and newer)** has been added via a self-contained
+> installer (the old releases that shipped `ubiquity`/`lupin` were the last that
+> could be installed the legacy way). See [Ubuntu version support](#ubuntu-version-support).
 
-For more information see: https://github.com/hakuna-m/wubiuefi/wiki
+## Quick start (build `wubi.exe`)
 
-## Compiling
+The build runs on **Linux** (or **WSL** on Windows) using Wine to host a Windows
+Python; it cross-produces a Windows `wubi.exe`. On a fresh Ubuntu/Debian machine:
 
+```sh
+# 1. install the build dependencies (see docs/BUILD.md for the full list)
+sudo dpkg --add-architecture i386 && sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
+    make wine wine32 wine64 xvfb \
+    grub-pc-bin grub-efi-amd64-bin grub-efi-ia32-bin \
+    shim-signed sbsigntool openssl \
+    gcc-mingw-w64 binutils-mingw-w64 gettext zip wget xz-utils
 
-| Make Command         | Description                                                                                                                                                                                                               |
-|----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `make`               | Builds wubi.exe, note that the first time you run it, you will have to install python inside of Wine, this is performed automatically, just confirm all the default choices in the installation screens that will appear. |
-| `make runpy`         | Runs wubi under wine directly from source                                                                                                                                                                                 |
-| `make runbin`        | Builds wubi and runs the packaged binary under wine                                                                                                                                                                       |
-| `make wubizip`       | Creates a special zip file conatining python.exe and non byte compiled python files that is convenient for debugging purposes. Inside of Windows, unzip the archive, then run `python.exe main.py --verbose`              |
-| `make pot`           | Generates a gettext template (`/po/wubi.pot`)                                                                                                                                                                             |
-| `make check_wine`    | Creates the Wine environment if it doesn't exist.                                                                                                                                                                         |
-| `make check_winboot` | Creates the environment for building and signing boot loaders if it doesn't exist.                                                                                                                                        |
-| `make winboot`       | Creates the boot loader files (old version)                                                                                                                                                                               |
-| `make winboot2`      | Creates the boot loader files (new version)                                                                                                                                                                               |
-| `make clean`         | Removes built files                                                                                                                                                                                                       |
-| `make distclean`     | Removes built files and environment                                                                                                                                                                                       |
+# 2. build (first run downloads the Wine Python 3.12 + PyInstaller automatically)
+WINEARCH=win32 WINEDLLOVERRIDES="mscoree=d;mshtml=d" make build
+```
 
+The result is `build/wubi.exe`. For the complete guide (prerequisites, native
+Windows notes, troubleshooting, downloading a prebuilt artifact from CI) see
+**[docs/BUILD.md](docs/BUILD.md)**.
+
+## Make targets
+
+| Command            | Description                                                                                  |
+|--------------------|----------------------------------------------------------------------------------------------|
+| `make` / `make build` | Build `build/wubi.exe` (freezes the app with PyInstaller; builds the boot loaders, `cpuid.dll` and translations as needed). |
+| `make runpy`       | Run Wubi from source under Wine (no freezing).                                               |
+| `make runbin`      | Build and run the packaged `wubi.exe` under Wine.                                            |
+| `make wubizip`     | Produce a zip with the staged tree + Wine Python for debugging.                              |
+| `make unittest`    | Run the unit tests under Wine.                                                               |
+| `make pot` / `make update-po` | Regenerate / merge the gettext translation templates.                              |
+| `make check_wine`  | Create the Wine prefix and install the Windows Python 3.12 + PyInstaller.                    |
+| `make check_winboot` | Install/locate the GRUB + shim + `sbsign` tooling and generate dummy Secure Boot keys.     |
+| `make winboot2`    | Build the (UEFI) boot loader files.                                                          |
+| `make clean` / `make distclean` | Remove build output / build output + the Wine prefix.                           |
+
+CI also builds `wubi.exe` on every push to `modernize` and on manual dispatch —
+download the `wubi-exe` artifact from the **Actions** tab
+(`.github/workflows/build-windows.yml`).
 
 ## Code overview
 
-* `/src/winui` : Thin ctypes wrapper around win32 native graphical user interface
-* `/src/pylauncher` : Makes python code into an executable, the Python script is examined and all the dependencies are added to an LZMA archive, then an executable header is concatenated to the archive that decompresses it and runs the script using the Python DLL
-* `/src/wubi` : The main Wubi application, the code is split between backend and frontend, where each runs in its own thread. The two interact via a tasklist object, where the frontend usually runs a tasklist which is a set of backend tasks. Backends and Frontends are platform specific. For now only the Windows platform is supported.
-* `/data` : Settings for Wubi branding and customization
-* `/po` : Translations
-* `/bin` : Other binary files required at runtime (will be compiled at a later stage)
+* `/src/wubi` — the main application, split into a **backend** and **frontend**
+  that each run in their own thread and communicate through a tasklist. Backends
+  and frontends are platform-specific (only Windows is implemented).
+  * `backends/common` — shared install logic, ISO/metadata handling, downloader,
+    tasklist, and the **distro providers** (`providers.py`, see
+    [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+  * `backends/win32` — Windows-specific bits (registry, drives, EFI/BCD, memory,
+    BitLocker detection, virtual disk).
+  * `frontends/win32` — the GUI pages.
+* `/src/winui` — thin `ctypes` wrapper around the native Win32 GUI.
+* `/src/openpgp`, `/src/urlgrabber`, `/src/bittorrent` — vendored libraries
+  (GPG signature verification, HTTP download, optional BitTorrent).
+* `/data` — branding, preseed/installer assets, boot configs, signing keys.
+* `/po` — translations.
+* `/blobs` — prebuilt runtime binaries (7-Zip, `resize2fs`, …) staged into `bin/`.
+* `wubi.spec` — the PyInstaller spec used to freeze the app.
 
-## Wubi tasks
+(The old `src/pylauncher`/`src/pypack` freezer has been removed in favour of
+PyInstaller.)
 
-Wubi performs the following tasks:
+## Ubuntu version support
 
-* Fetches information about the running system which will be used during installation
-* Checks that the minimum installation requirements are met
-* Retrieves required user information via a GUI
-* Looks for available local CDs and ISO files
-* Downloads the ISO if one is required, using Bittorrent and an HTTP download manager
-* Checks the ISO/CD MD5 sums and the MD5 signature
-* Extracts the kernel and initrd from the ISO
-* Adds a new boot entry to the existing windows bootloader
-* Prepares a preseed file to be used during the Linux-side installation
-* Allocates space for the virtual disk files
+Wubi reboots into the live ISO and installs Ubuntu into a loopback file
+(`root.disk`). How that install is driven depends on the release, selected per
+entry in `data/isolist.ini` via `provider=`:
 
-*The actual installation is performed within Linux after rebooting the machine.*
+* **Legacy (≤ 22.04, `provider=ubuntu`)** — driven by the distribution's
+  `ubiquity` installer through a debconf preseed plus the `lupin` loopback
+  patches. Unchanged.
+* **Modern (24.04+, `provider=ubuntu-modern`)** — 24.04 dropped `ubiquity` and
+  `lupin` for the subiquity installer, which cannot install into a loopback
+  file. Wubi therefore performs the install itself: a self-contained script runs
+  in the live session, unpacks the layered squashfs (`minimal` +
+  `minimal.standard`, excluding the live-only layer) into `root.disk`, configures
+  the system and a loop-boot initramfs, and writes the boot config that the
+  existing `wubildr` chain loads. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## What Wubi does
+
+* Gathers host system info and checks the minimum installation requirements.
+* Collects user choices through the GUI (you can **browse for a local ISO**).
+* Detects **BitLocker** on the target/system drive and warns before changing the
+  boot configuration.
+* Finds a local ISO/CD or downloads one over HTTP (BitTorrent is opt-in via
+  `--bittorrent`); verifies checksums and the GPG signature.
+* Adds a boot entry to the Windows boot configuration (BCD/EFI), with **Secure
+  Boot** support via a signed shim + GRUB.
+* Allocates the virtual disk and prepares the install; the actual installation
+  completes after rebooting into Linux.
 
 ## Customization
 
-* Edit the files in data as appropriate and build your image
-* You will need to provide an ISO that is similar to the Ubuntu ISO and in particular it must have .disk/info formatted like .disk/info in the Ubuntu ISO
-* You must provide a webserver with metalink file, metalink file MD5 checksums and signatures for the MD5 sums
-* Add your signing key to `data/trustedkeys.gpg`
-* Replace the generated dummy keys in `.key` with your signing keys for Secure Boot
-* On the Linux side, the distribution must be capable of booting and rebooting off a loop file, perform an automatic installation and accept the special boot parameters that indicate the local preseed file and ISO image to boot from.
+* Edit the files in `data/` and rebuild.
+* Provide an ISO whose `.disk/info` is formatted like Ubuntu's, and a webserver
+  with the metalink, checksums and signatures.
+* Add your signing key to `data/trustedkeys.gpg`.
+* Replace the generated dummy keys in `.key/` with your own Secure Boot keys.
+* The Linux side must be able to boot/reboot off a loop file and accept the
+  special boot parameters (legacy path), or match a supported layered-squashfs
+  layout (modern path).
 
 ## License
 
-GPL v2. See [LICENSE](./LICENSE)
+GPL v2. See [LICENSE](./LICENSE).
