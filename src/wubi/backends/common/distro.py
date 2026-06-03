@@ -19,7 +19,7 @@
 #
 
 import os
-from utils import read_file
+from .utils import read_file
 import logging
 import re
 

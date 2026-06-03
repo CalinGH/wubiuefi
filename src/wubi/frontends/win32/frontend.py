@@ -19,15 +19,15 @@
 #
 
 from winui import ui
-from installation_finish_page import InstallationFinishPage
-from installation_page import InstallationPage
-from uninstallation_page import UninstallationPage
-from uninstallation_finish_page import UninstallationFinishPage
-from accessibility_page import AccessibilityPage
-from progress_page import ProgressPage
-from cd_menu_page import CDMenuPage
-from cd_finish_page import CDFinishPage
-from cdboot_page import CDBootPage
+from .installation_finish_page import InstallationFinishPage
+from .installation_page import InstallationPage
+from .uninstallation_page import UninstallationPage
+from .uninstallation_finish_page import UninstallationFinishPage
+from .accessibility_page import AccessibilityPage
+from .progress_page import ProgressPage
+from .cd_menu_page import CDMenuPage
+from .cd_finish_page import CDFinishPage
+from .cdboot_page import CDBootPage
 from wubi.errors import QuitException
 import logging
 log = logging.getLogger("WindowsFrontend")

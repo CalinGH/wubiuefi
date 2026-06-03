@@ -1,1 +1,1 @@
-from frontend import WindowsFrontend
+from .frontend import WindowsFrontend

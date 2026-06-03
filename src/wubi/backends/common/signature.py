@@ -23,7 +23,7 @@ Check sinature using openpgp and python-crypto
 '''
 
 import os
-from utils import read_file
+from .utils import read_file
 
 from openpgp.sap.api import verify_str
 #explicit imports required by pylauncher

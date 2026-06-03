@@ -19,7 +19,7 @@
 #
 
 from winui import ui
-from page import Page
+from .page import Page
 import logging
 log = logging.getLogger("WinuiInstallationFinishPage")
 

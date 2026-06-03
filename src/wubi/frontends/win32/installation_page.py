@@ -19,7 +19,7 @@
 #
 
 from winui import ui
-from page import Page
+from .page import Page
 from wubi.backends.common.mappings import reserved_usernames, lang_country2linux_locale, language2lang_country, lang_country2language
 import os
 import logging

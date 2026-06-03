@@ -29,16 +29,16 @@ import gettext
 import glob
 import shutil
 import configparser as ConfigParser
-import btdownloader
-import downloader
+from . import btdownloader
+from . import downloader
 import subprocess
 
-from metalink import parse_metalink
-from tasklist import ThreadedTaskList, Task
-from distro import Distro
-from mappings import lang_country2linux_locale
-from utils import join_path, run_nonblocking_command, md5_password, copy_file, read_file, write_file, get_file_hash, reversed, find_line_in_file, unix_path, rm_tree, spawn_command
-from signature import verify_gpg_signature
+from .metalink import parse_metalink
+from .tasklist import ThreadedTaskList, Task
+from .distro import Distro
+from .mappings import lang_country2linux_locale
+from .utils import join_path, run_nonblocking_command, md5_password, copy_file, read_file, write_file, get_file_hash, reversed, find_line_in_file, unix_path, rm_tree, spawn_command
+from .signature import verify_gpg_signature
 from wubi import errors
 from os.path import abspath
 
