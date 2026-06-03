@@ -210,7 +210,7 @@ class KeepAliveHandler:
         
     #### Transaction Execution
     def do_open(self, req):
-        host = req.get_host()
+        host = req.host
         if not host:
             raise urllib2.URLError('no host given')
 
@@ -245,7 +245,7 @@ class KeepAliveHandler:
         if DEBUG: DEBUG.info("STATUS: %s, %s", r.status, r.reason)
         r._handler = self
         r._host = host
-        r._url = req.get_full_url()
+        r._url = req.full_url
         r._connection = h
         r.code = r.status
         r.headers = r.msg
@@ -302,16 +302,16 @@ class KeepAliveHandler:
 
     def _start_transaction(self, h, req):
         try:
-            if req.has_data():
-                data = req.get_data()
-                h.putrequest('POST', req.get_selector())
+            if req.data is not None:
+                data = req.data
+                h.putrequest('POST', req.selector)
                 if 'Content-type' not in req.headers:
                     h.putheader('Content-type',
                                 'application/x-www-form-urlencoded')
                 if 'Content-length' not in req.headers:
                     h.putheader('Content-length', '%d' % len(data))
             else:
-                h.putrequest('GET', req.get_selector())
+                h.putrequest('GET', req.selector)
         except (socket.error, httplib.HTTPException) as err:
             raise urllib2.URLError(err)
 
@@ -320,7 +320,7 @@ class KeepAliveHandler:
         for k, v in req.headers.items():
             h.putheader(k, v)
         h.endheaders()
-        if req.has_data():
+        if req.data is not None:
             h.send(data)
 
     def _get_connection(self, host):

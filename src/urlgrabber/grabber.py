@@ -373,7 +373,6 @@ import urllib.parse as urlparse
 import email.utils as rfc822
 import time
 import string
-import urllib
 import urllib.request as urllib2
 from stat import ST_MTIME, ST_SIZE
 
@@ -656,7 +655,7 @@ class URLParser:
         if not scheme or (len(scheme) == 1 and scheme in string.ascii_letters):
             # if a scheme isn't specified, we guess that it's "file:"
             if url[0] not in '/\\': url = os.path.abspath(url)
-            url = 'file:' + urllib.pathname2url(url)
+            url = 'file:' + urllib2.pathname2url(url)
             parts = urlparse.urlparse(url)
             quote = 0 # pathname2url quotes, so we won't do it again
 
@@ -702,7 +701,7 @@ class URLParser:
         passing into urlgrabber.
         """
         (scheme, host, path, parm, query, frag) = parts
-        path = urllib.quote(path)
+        path = urlparse.quote(path)
         return (scheme, host, path, parm, query, frag)
 
     hexvals = '0123456789ABCDEF'
@@ -893,11 +892,11 @@ class URLGrabber:
         (url,parts) = opts.urlparser.parse(url, opts)
         (scheme, host, path, parm, query, frag) = parts
         if filename is None:
-            filename = os.path.basename( urllib.unquote(path) )
+            filename = os.path.basename( urlparse.unquote(path) )
         if scheme == 'file' and not opts.copy_local:
             # just return the name of the local file - don't make a
             # copy currently
-            path = urllib.url2pathname(path)
+            path = urllib2.url2pathname(path)
             if host:
                 path = os.path.normpath('//' + host + path)
             if not os.path.exists(path):
@@ -1092,7 +1091,7 @@ class URLGrabberFileObject:
                 fo, hdr = self._make_request(req, opener)
 
         (scheme, host, path, parm, query, frag) = urlparse.urlparse(self.url)
-        path = urllib.unquote(path)
+        path = urlparse.unquote(path)
         if not (self.opts.progress_obj or self.opts.raw_throttle() \
                 or self.opts.timeout):
             # if we're not using the progress_obj, throttling, or timeout
@@ -1109,7 +1108,7 @@ class URLGrabberFileObject:
                 length = None
 
             self.opts.progress_obj.start(str(self.filename),
-                                         urllib.unquote(self.url),
+                                         urlparse.unquote(self.url),
                                          os.path.basename(path),
                                          length, text=self.opts.text)
             self.opts.progress_obj.update(0)
@@ -1118,7 +1117,7 @@ class URLGrabberFileObject:
     def _add_headers(self, req):
         if self.opts.user_agent:
             req.add_header('User-agent', self.opts.user_agent)
-        try: req_type = req.get_type()
+        try: req_type = req.type
         except ValueError: req_type = None
         if self.opts.http_headers and req_type in ('http', 'https'):
             for h, v in self.opts.http_headers:
@@ -1210,10 +1209,10 @@ class URLGrabberFileObject:
 
         new_fo.close()
         try:
-            modified_tuple  = self.hdr.getdate_tz('last-modified')
+            modified_tuple  = rfc822.parsedate_tz(self.hdr.get('last-modified'))
             modified_stamp  = rfc822.mktime_tz(modified_tuple)
             os.utime(self.filename, (modified_stamp, modified_stamp))
-        except (TypeError,) as e: pass
+        except (TypeError, ValueError) as e: pass
 
         return size
 
@@ -1322,9 +1321,8 @@ def CachedProxyHandler(proxies):
             break
     else:
         for k, v in proxies.items():
-            utype, url = urllib.splittype(v)
-            host, other = urllib.splithost(url)
-            if (utype is None) or (host is None):
+            split = urlparse.urlsplit(v)
+            if (not split.scheme) or (not split.netloc):
                 raise URLGrabError(13, _('Bad proxy URL: %s') % v)
 
         if DEBUG: DEBUG.info('creating new proxy handler: %s', proxies)
