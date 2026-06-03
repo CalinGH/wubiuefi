@@ -422,7 +422,11 @@ class Backend(object):
         urls = self.select_mirrors(file.urls)
         for url in urls[:5]:
             if url.type == 'bittorrent':
-                if self.info.no_bittorrent:
+                # BitTorrent is opt-in: the vendored client is not yet
+                # Python 3 ready (bencode/wire-protocol bytes handling), and
+                # a failure mid-protocol could stall instead of falling back,
+                # so by default we skip straight to the HTTP mirrors.
+                if not getattr(self.info, 'use_bittorrent', False) or self.info.no_bittorrent:
                     continue
                 if os.path.exists(save_as):
                     try:
