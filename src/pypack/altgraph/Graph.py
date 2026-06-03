@@ -14,7 +14,7 @@ Base Graph class
 
 from altgraph import GraphError
 
-from compat import *
+from altgraph.compat import *
 
 class Graph(object):
     """
@@ -163,14 +163,14 @@ class Graph(object):
         """
         Restores all hidden edges.
         """
-        for edge in self.hidden_edges.keys():
+        for edge in list(self.hidden_edges.keys()):
             self.restore_edge(edge)
 
     def restore_all_nodes(self):
         """
         Restores all hidden nodes.
         """
-        for node in self.hidden_nodes.keys():
+        for node in list(self.hidden_nodes.keys()):
             self.restore_node(node)
 
     def __contains__(self, node):
@@ -222,13 +222,13 @@ class Graph(object):
         """
         Return a list of the node ids for all visible nodes in the graph.
         """
-        return self.nodes.keys()
+        return list(self.nodes.keys())
 
     def edge_list(self):
         """
         Returns an iterator for all visible nodes in the graph.
         """
-        return self.edges.keys()
+        return list(self.edges.keys())
 
     def number_of_hidden_edges(self):
         """
@@ -246,13 +246,13 @@ class Graph(object):
         """
         Returns the list with the hidden nodes
         """
-        return self.hidden_nodes.keys()
+        return list(self.hidden_nodes.keys())
 
     def hidden_edge_list(self):
         """
         Returns a list with the hidden edges
         """
-        return self.hidden_edges.keys()
+        return list(self.hidden_edges.keys())
 
     def describe_node(self, node):
         """
@@ -296,13 +296,13 @@ class Graph(object):
         """
         List of nodes connected by outgoing edges
         """
-        return map(self.tail, self.out_edges(node))
+        return list(map(self.tail, self.out_edges(node)))
 
     def inc_nbrs(self, node):
         """
         List of nodes connected by incoming edges
         """
-        return map(self.head, self.inc_edges(node))
+        return list(map(self.head, self.inc_edges(node)))
 
     def all_nbrs(self, node):
         """

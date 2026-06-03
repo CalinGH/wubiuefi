@@ -104,7 +104,7 @@ def create_S2K(*args, **kwords):
             if 0 < kwords['count'] < 128:
                 d.append(STN.int2str(kwords['count']))
             else:
-                raise PGPValueError, "S2K count value %s out of range." % kwords['count']
+                raise PGPValueError("S2K count value %s out of range." % kwords['count'])
         else:
             d.append('\x63') # 99
     return S2K(''.join(d))

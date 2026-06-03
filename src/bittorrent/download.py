@@ -2,7 +2,7 @@
 # see LICENSE.txt for license information
 
 from zurllib import urlopen
-from urlparse import urljoin
+from urllib.parse import urljoin
 from btformats import check_message
 from Choker import Choker
 from Storage import Storage
@@ -20,7 +20,7 @@ from PiecePicker import PiecePicker
 from bencode import bencode, bdecode
 from __init__ import version
 from binascii import b2a_hex
-from sha import sha
+from hashlib import sha1 as sha
 from os import path, makedirs
 from parseargs import parseargs, formatDefinitions
 from socket import error as socketerror
@@ -102,13 +102,13 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
         config, args = parseargs(params, defaults, 0, 1)
         if args:
             if config.get('responsefile', None) == None:
-                raise ValueError, 'must have responsefile as arg or parameter, not both'
+                raise ValueError('must have responsefile as arg or parameter, not both')
             if path.isfile(args[0]):
                 config['responsefile'] = args[0]
             else: 
                 config['url'] = args[0]
         if (config['responsefile'] == '') == (config['url'] == ''):
-            raise ValueError, 'need responsefile or url'
+            raise ValueError('need responsefile or url')
     except ValueError as e:
         errorfunc('error: ' + str(e) + '\nrun with no args for parameter explanations')
         return
@@ -144,7 +144,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
                 makedirs(f)
                 
         info = response['info']
-        if info.has_key('length'):
+        if 'length' in info:
             file_length = info['length']
             file = filefunc(info['name'], file_length, config['saveas'], False)
             if file is None:
@@ -191,7 +191,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
     myid = 'M' + version.replace('.', '-')
     myid = myid + ('-' * (8 - len(myid))) + b2a_hex(sha(repr(time()) + ' ' + str(getpid())).digest()[-6:])
     seed(myid)
-    pieces = [info['pieces'][x:x+20] for x in xrange(0, 
+    pieces = [info['pieces'][x:x+20] for x in range(0, 
         len(info['pieces']), 20)]
     def failed(reason, errorfunc = errorfunc, doneflag = doneflag):
         doneflag.set()
@@ -209,7 +209,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
             finflag.set()
             try:
                 storage.set_readonly()
-            except (IOError, OSError), e:
+            except (IOError, OSError) as e:
                 errorfunc('trouble setting readonly at end - ' + str(e))
             if ann[0] is not None:
                 ann[0](1)
@@ -232,7 +232,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
         return
 
     e = 'maxport less than minport - no ports to check'
-    for listen_port in xrange(config['minport'], config['maxport'] + 1):
+    for listen_port in range(config['minport'], config['maxport'] + 1):
         try:
             rawserver.bind(listen_port, config['bind'])
             break
@@ -257,7 +257,7 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
     ratemeasure = RateMeasure(storagewrapper.get_amount_left())
     rm[0] = ratemeasure.data_rejected
     picker = PiecePicker(len(pieces), config['rarest_first_cutoff'])
-    for i in xrange(len(pieces)):
+    for i in range(len(pieces)):
         if storagewrapper.do_I_have(i):
             picker.complete(i)
     downloader = Downloader(storagewrapper, picker,

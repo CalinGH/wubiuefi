@@ -20,7 +20,7 @@ class SingleDownload:
 
     def disconnected(self):
         self.downloader.downloads.remove(self)
-        for i in xrange(len(self.have)):
+        for i in range(len(self.have)):
             if self.have[i]:
                 self.downloader.picker.lost_have(i)
         self._letgo()
@@ -207,7 +207,7 @@ class SingleDownload:
 
     def got_have_bitfield(self, have):
         self.have = have
-        for i in xrange(len(self.have)):
+        for i in range(len(self.have)):
             if self.have[i]:
                 self.downloader.picker.got_have(i)
         if self.downloader.picker.am_I_complete() and self.have.numfalse == 0:
@@ -219,7 +219,7 @@ class SingleDownload:
                     self.interested = True
                     self.connection.send_interested()
                     return
-        for i in xrange(len(self.have)):
+        for i in range(len(self.have)):
             if self.have[i] and self.downloader.storage.do_I_have_requests(i):
                 self.interested = True
                 self.connection.send_interested()
@@ -250,7 +250,7 @@ class Downloader:
 
 class DummyPicker:
     def __init__(self, num, r):
-        self.stuff = range(num)
+        self.stuff = list(range(num))
         self.r = r
 
     def next(self, wantfunc, seed):
@@ -281,7 +281,7 @@ class DummyPicker:
 class DummyStorage:
     def __init__(self, remaining, have_endgame = False, numpieces = 1):
         self.remaining = remaining
-        self.active = [[] for i in xrange(numpieces)]
+        self.active = [[] for i in range(numpieces)]
         self.endgame = False
         self.have_endgame = have_endgame
 

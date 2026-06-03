@@ -101,14 +101,14 @@ EXTRA ATTRIBUTES AND METHODS
 
 # $Id: keepalive.py,v 1.16 2006/09/22 00:58:05 mstenner Exp $
 
-import urllib2
-import httplib
+import urllib.request as urllib2
+import http.client as httplib
 import socket
-import thread
+import _thread as thread
 
 DEBUG = None
 
-import sslfactory
+from . import sslfactory
 
 import sys
 if sys.version_info < (2, 4): HANDLE_ERRORS = 1
@@ -128,7 +128,7 @@ class ConnectionManager:
     def add(self, host, connection, ready):
         self._lock.acquire()
         try:
-            if not self._hostmap.has_key(host): self._hostmap[host] = []
+            if host not in self._hostmap: self._hostmap[host] = []
             self._hostmap[host].append(connection)
             self._connmap[connection] = host
             self._readymap[connection] = ready
@@ -158,7 +158,7 @@ class ConnectionManager:
         conn = None
         self._lock.acquire()
         try:
-            if self._hostmap.has_key(host):
+            if host in self._hostmap:
                 for c in self._hostmap[host]:
                     if self._readymap[c]:
                         self._readymap[c] = 0
@@ -236,7 +236,7 @@ class KeepAliveHandler:
                 self._cm.add(host, h, 0)
                 self._start_transaction(h, req)
                 r = h.getresponse()
-        except (socket.error, httplib.HTTPException), err:
+        except (socket.error, httplib.HTTPException) as err:
             raise urllib2.URLError(err)
             
         # if not a persistent connection, don't try to reuse it
@@ -305,14 +305,14 @@ class KeepAliveHandler:
             if req.has_data():
                 data = req.get_data()
                 h.putrequest('POST', req.get_selector())
-                if not req.headers.has_key('Content-type'):
+                if 'Content-type' not in req.headers:
                     h.putheader('Content-type',
                                 'application/x-www-form-urlencoded')
-                if not req.headers.has_key('Content-length'):
+                if 'Content-length' not in req.headers:
                     h.putheader('Content-length', '%d' % len(data))
             else:
                 h.putrequest('GET', req.get_selector())
-        except (socket.error, httplib.HTTPException), err:
+        except (socket.error, httplib.HTTPException) as err:
             raise urllib2.URLError(err)
 
         for args in self.parent.addheaders:
@@ -377,7 +377,7 @@ class HTTPResponse(httplib.HTTPResponse):
             httplib.HTTPResponse.__init__(self, sock, debuglevel)
         self.fileno = sock.fileno
         self.code = None
-        self._rbuf = ''
+        self._rbuf = b''
         self._rbufsize = 8096
         self._handler = None # inserted by the handler later
         self._host = None    # (same)
@@ -417,16 +417,16 @@ class HTTPResponse(httplib.HTTPResponse):
                 return s
 
         s = self._rbuf + self._raw_read(amt)
-        self._rbuf = ''
+        self._rbuf = b''
         return s
 
     def readline(self, limit=-1):
-        data = ""
-        i = self._rbuf.find('\n')
+        data = b""
+        i = self._rbuf.find(b'\n')
         while i < 0 and not (0 < limit <= len(self._rbuf)):
             new = self._raw_read(self._rbufsize)
             if not new: break
-            i = new.find('\n')
+            i = new.find(b'\n')
             if i >= 0: i = i + len(self._rbuf)
             self._rbuf = self._rbuf + new
         if i < 0: i = len(self._rbuf)
@@ -467,7 +467,7 @@ def error_handler(url):
     urllib2.install_opener(opener)
     pos = {0: 'off', 1: 'on'}
     for i in (0, 1):
-        print "  fancy error handling %s (HANDLE_ERRORS = %i)" % (pos[i], i)
+        print("  fancy error handling %s (HANDLE_ERRORS = %i)" % (pos[i], i))
         HANDLE_ERRORS = i
         try:
             fo = urllib2.urlopen(url)
@@ -476,13 +476,13 @@ def error_handler(url):
             try: status, reason = fo.status, fo.reason
             except AttributeError: status, reason = None, None
         except IOError as e:
-            print "  EXCEPTION: %s" % e
+            print("  EXCEPTION: %s" % e)
             raise
         else:
-            print "  status = %s, reason = %s" % (status, reason)
+            print("  status = %s, reason = %s" % (status, reason))
     HANDLE_ERRORS = orig
     hosts = keepalive_handler.open_connections()
-    print "open connections:", hosts
+    print("open connections:", hosts)
     keepalive_handler.close_all()
 
 def continuity(url):
@@ -496,7 +496,7 @@ def continuity(url):
     foo = fo.read()
     fo.close()
     m = hashlib.md5(foo)
-    print format % ('normal urllib', m.hexdigest())
+    print(format % ('normal urllib', m.hexdigest()))
 
     # now install the keepalive handler and try again
     opener = urllib2.build_opener(HTTPHandler())
@@ -506,7 +506,7 @@ def continuity(url):
     foo = fo.read()
     fo.close()
     m = hashlib.md5(foo)
-    print format % ('keepalive read', m.hexdigest())
+    print(format % ('keepalive read', m.hexdigest()))
 
     fo = urllib2.urlopen(url)
     foo = ''
@@ -516,25 +516,25 @@ def continuity(url):
         else: break
     fo.close()
     m = hashlib.md5(foo)
-    print format % ('keepalive readline', m.hexdigest())
+    print(format % ('keepalive readline', m.hexdigest()))
 
 def comp(N, url):
-    print '  making %i connections to:\n  %s' % (N, url)
+    print('  making %i connections to:\n  %s' % (N, url))
 
     sys.stdout.write('  first using the normal urllib handlers')
     # first use normal opener
     opener = urllib2.build_opener()
     urllib2.install_opener(opener)
     t1 = fetch(N, url)
-    print '  TIME: %.3f s' % t1
+    print('  TIME: %.3f s' % t1)
 
     sys.stdout.write('  now using the keepalive handler       ')
     # now install the keepalive handler and try again
     opener = urllib2.build_opener(HTTPHandler())
     urllib2.install_opener(opener)
     t2 = fetch(N, url)
-    print '  TIME: %.3f s' % t2
-    print '  improvement factor: %.2f' % (t1/t2, )
+    print('  TIME: %.3f s' % t2)
+    print('  improvement factor: %.2f' % (t1/t2, ))
     
 def fetch(N, url, delay=0):
     import time
@@ -552,7 +552,7 @@ def fetch(N, url, delay=0):
     for i in lens[1:]:
         j = j + 1
         if not i == lens[0]:
-            print "WARNING: inconsistent length on read %i: %i" % (j, i)
+            print("WARNING: inconsistent length on read %i: %i" % (j, i))
 
     return diff
 
@@ -560,16 +560,16 @@ def test_timeout(url):
     global DEBUG
     dbbackup = DEBUG
     class FakeLogger:
-        def debug(self, msg, *args): print msg % args
+        def debug(self, msg, *args): print(msg % args)
         info = warning = error = debug
     DEBUG = FakeLogger()
-    print "  fetching the file to establish a connection"
+    print("  fetching the file to establish a connection")
     fo = urllib2.urlopen(url)
     data1 = fo.read()
     fo.close()
  
     i = 20
-    print "  waiting %i seconds for the server to close the connection" % i
+    print("  waiting %i seconds for the server to close the connection" % i)
     while i > 0:
         sys.stdout.write('\r  %2i' % i)
         sys.stdout.flush()
@@ -577,33 +577,33 @@ def test_timeout(url):
         i -= 1
     sys.stderr.write('\r')
 
-    print "  fetching the file a second time"
+    print("  fetching the file a second time")
     fo = urllib2.urlopen(url)
     data2 = fo.read()
     fo.close()
 
     if data1 == data2:
-        print '  data are identical'
+        print('  data are identical')
     else:
-        print '  ERROR: DATA DIFFER'
+        print('  ERROR: DATA DIFFER')
 
     DEBUG = dbbackup
 
     
 def test(url, N=10):
-    print "checking error hander (do this on a non-200)"
+    print("checking error hander (do this on a non-200)")
     try: error_handler(url)
     except IOError as e:
-        print "exiting - exception will prevent further tests"
+        print("exiting - exception will prevent further tests")
         sys.exit()
-    print
-    print "performing continuity test (making sure stuff isn't corrupted)"
+    print()
+    print("performing continuity test (making sure stuff isn't corrupted)")
     continuity(url)
-    print
-    print "performing speed comparison"
+    print()
+    print("performing speed comparison")
     comp(N, url)
-    print
-    print "performing dropped-connection check"
+    print()
+    print("performing dropped-connection check")
     test_timeout(url)
     
 if __name__ == '__main__':
@@ -613,6 +613,6 @@ if __name__ == '__main__':
         N = int(sys.argv[1])
         url = sys.argv[2]
     except:
-        print "%s <integer> <url>" % sys.argv[0]
+        print("%s <integer> <url>" % sys.argv[0])
     else:
         test(url, N)

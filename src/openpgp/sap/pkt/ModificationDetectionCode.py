@@ -41,4 +41,4 @@ class ModificationDetectionCodeBody:
         if len(d) == 20:
             self._d = self.hash = d
         else:
-            raise PGPPacketError, "MDCode packet body must be 20 characters long, not->(%s)." % len(d)
+            raise PGPPacketError("MDCode packet body must be 20 characters long, not->(%s)." % len(d))

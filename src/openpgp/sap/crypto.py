@@ -41,7 +41,7 @@ For now, ``k`` is just forced to be a 128-bit prime.
 
 import hashlib
 
-from StringIO import StringIO
+from io import BytesIO as StringIO
 
 import Crypto.Util.number as NUM
 
@@ -151,13 +151,13 @@ def hash_context(version, hashalg, sigtype, sigcontext, target, primary):
 
     ## weird sigs
     elif SIG_STANDALONE == sigtype:
-        raise NotImplementedError, "Haven't got around to SIG_STANDALONE"
+        raise NotImplementedError("Haven't got around to SIG_STANDALONE")
     elif SIG_TIMESTAMP == sigtype:
-        raise NotImplementedError, "Haven't got around to SIG_TIMESTAMP"
+        raise NotImplementedError("Haven't got around to SIG_TIMESTAMP")
     elif SIG_THIRDPARTY == sigtype:
-        raise NotImplementedError, "Haven't got around to SIG_THIRDPARTY"
+        raise NotImplementedError("Haven't got around to SIG_THIRDPARTY")
     else:
-        raise NotImplementedError, "Signature type->(%s) is not supported" % sigtype
+        raise NotImplementedError("Signature type->(%s) is not supported" % sigtype)
 
     context.write(sigcontext.read())
     context.seek(0)
@@ -182,7 +182,7 @@ def hash_context(version, hashalg, sigtype, sigcontext, target, primary):
             import hashlib
             hashed_target = hashlib.sha512(context.read()).digest()
         else:
-            raise NotImplementedError, "Unsupported signature hash algorithm->(%s)" % hashalg
+            raise NotImplementedError("Unsupported signature hash algorithm->(%s)" % hashalg)
     finally:
         context.close()
 
@@ -213,7 +213,7 @@ def pad_rsa(alg_hash, hashed_msg, rsa_n_bit_length):
     elif HASH_SHA512 == alg_hash:
         prefix = '\x30\x51\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03\x05\x00\x04\x40'
     else:
-        raise NotImplementedError, "Prefix unassigned for RSA signature hash->(%s)" % alg_hash
+        raise NotImplementedError("Prefix unassigned for RSA signature hash->(%s)" % alg_hash)
     padlen = ((rsa_n_bit_length + 7)/8) - len(prefix) - len(hashed_msg) - 3
     padding = ''.join(['\xff' for x in range(padlen)])
     return ''.join(['\x00\x01', padding, '\x00', prefix, hashed_msg])
@@ -427,7 +427,7 @@ def sign_RSA(msg, key_tuple):
         - `d`: integer RSA decryption key
     """
     import Crypto.PublicKey.RSA as RSA
-    rsa = RSA.construct((key_tuple[0], 0L, key_tuple[1]))
+    rsa = RSA.construct((key_tuple[0], 0, key_tuple[1]))
     return rsa.sign(msg, None)[0]
 
 def verify(signature, target, signer, *args, **kwords):
@@ -496,7 +496,7 @@ def verify(signature, target, signer, *args, **kwords):
         return verify_DSA(ctx_hash, sigtup, keytup)
 
     else:
-        raise NotImplementedError, "Unsupported public key alg->(%s)." % key.alg_pubkey
+        raise NotImplementedError("Unsupported public key alg->(%s)." % key.alg_pubkey)
 
 def verify_DSA(msg, sig_tuple, key_tuple):
     """Verify a DSA signature.
@@ -678,7 +678,7 @@ def _import_cipher(algorithm):
         from Crypto.Cipher import AES
         return AES
     else:
-        raise NotImplementedError, "Can't handle cipher type->(%s)" % algorithm
+        raise NotImplementedError("Can't handle cipher type->(%s)" % algorithm)
 
 def _keysize(algorithm):
     if algorithm in [SYM_CAST5, SYM_BLOWFISH, SYM_AES128]:
@@ -688,7 +688,7 @@ def _keysize(algorithm):
     elif SYM_AES256 == algorithm:
         return 32
     else:
-        raise NotImplementedError, "Unsupported symmetric key algorithm->(%s). Using GnuPG DUMMY?" % algorithm
+        raise NotImplementedError("Unsupported symmetric key algorithm->(%s). Using GnuPG DUMMY?" % algorithm)
 
 # The CFB block-size shifts depend on PyCrypto's predefined block size
 # per cipher. This function should be swapped out asap.
@@ -727,7 +727,7 @@ def crypt_CFB(instream, outstream, algorithm, key, register, direction):
         register = STN.prepad(shift) # use an IV full of 0x00
 
     if shift > len(register):
-        raise PGPCryptoError, "CFB shift amount->(%s) can't be larger than the feedback register->(%s)." % (shift, len(register))
+        raise PGPCryptoError("CFB shift amount->(%s) can't be larger than the feedback register->(%s)." % (shift, len(register)))
   
     while True:
         inblock = instream.read(shift) # block size = shift size
@@ -917,7 +917,7 @@ def decrypt_public(algorithm, key_tuple, cipher_tuple):
     if algorithm in [ASYM_RSA_EOS, ASYM_RSA_E]:
         from Crypto.PublicKey import RSA
 
-        key = RSA.construct((key_tuple[0], 0L, key_tuple[1])) # L for fastmath
+        key = RSA.construct((key_tuple[0], 0, key_tuple[1])) # L for fastmath
         a = STN.int2str(cipher_tuple[0])
         return key.decrypt((a,))
 
@@ -930,7 +930,7 @@ def decrypt_public(algorithm, key_tuple, cipher_tuple):
         return key.decrypt((a, b))
 
     else:
-        raise NotImplementedError, "Unsupported asymmetric algorithm:%s" % algorithm
+        raise NotImplementedError("Unsupported asymmetric algorithm:%s" % algorithm)
 
 def decrypt_secret_key(keypkt, passphrase=''):
     """Retrieve decryption key values from a secret key packet.
@@ -1027,7 +1027,7 @@ def decrypt_secret_key(keypkt, passphrase=''):
                 raise NotImplementedError("Unsupported public key algorithm->(%s)." % keypkt.body.alg)
 
         else:
-            raise NotImplementedError, "Unsupported key version->(%s)." % keypkt.body.version
+            raise NotImplementedError("Unsupported key version->(%s)." % keypkt.body.version)
 
         # check integrity
         if 254 == keypkt.body.s2k_usg:
@@ -1207,7 +1207,7 @@ def encrypt_public(algorithm, msg, key_tuple):
         k = Crypto.Util.number.getPrime(128, gen_random)
 
     else:
-        raise NotImplementedError, "Can't handle public encryption algorithm->(%s)" % algorithm
+        raise NotImplementedError("Can't handle public encryption algorithm->(%s)" % algorithm)
 
     enc_tup = key.encrypt(msg, k) # Crypto returns strings instead of integers.
 

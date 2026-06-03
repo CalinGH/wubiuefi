@@ -57,22 +57,22 @@ def try_module(module, modulename, failed):
             continue
         name = modulename + '.' + n
         try:
-            print 'trying ' + name
+            print('trying ' + name)
             func()
-            print 'passed ' + name
+            print('passed ' + name)
         except:
             print_exc()
             failed.append(name)
-            print 'failed ' + name
+            print('failed ' + name)
 
 def print_failed(failed):
-    print
+    print()
     if len(failed) == 0:
-        print 'everything passed'
+        print('everything passed')
     else:
-        print 'the following tests failed:'
+        print('the following tests failed:')
         for i in failed:
-            print i
+            print(i)
 
 
 

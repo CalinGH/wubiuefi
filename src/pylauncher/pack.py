@@ -39,7 +39,7 @@ def compress(target_dir):
 
     cmd = '%s a -t7z -m0=lzma -mx=9 -mfb=256 -md=32m -ms=on ../archive.7z *'
     cmd = cmd % (compressor,)
-    print cmd
+    print(cmd)
     os.chdir(target_dir)
     subprocess.call([compressor, "a", "-t7z", "-m0=lzma", "-mx=9", "-mfb=256",
                      "-md=32m", "-ms=on", "../archive.7z", "*"])
@@ -60,9 +60,9 @@ def make_self_extracting_exe(target_dir):
     target = ajoin(dirname(target_dir), 'application.exe')
     signature = ajoin(dirname(target_dir), 'signature')
     f = open(signature, 'wb')
-    f.write(SIGNATURE)
+    f.write(SIGNATURE.encode('ascii'))
     f.close()
-    print "Creating self extracting file %s" % target
+    print("Creating self extracting file %s" % target)
     cat(target, header, signature, archive)
 
 def add_python_interpreter(target_dir):

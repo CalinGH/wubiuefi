@@ -8,19 +8,12 @@ Originally (loosely) based on code in py2exe's build_exe.py by Thomas Heller.
 
 import sys
 import os
-import imp
+import importlib.machinery
 import warnings
-try:
-    set
-except NameError:
-    from sets import Set as set
 
-#from modulegraph import modulegraph
-#from modulegraph.modulegraph import Alias
-#from modulegraph.util import imp_find_module
-import modulegraph
-from modulegraph import Alias
-from util import imp_find_module, imp_walk
+from modulegraph import modulegraph
+from modulegraph.modulegraph import Alias
+from modulegraph.util import imp_find_module, imp_walk
 
 __all__ = [
     'find_modules', 'parse_mf_results'
@@ -86,8 +79,8 @@ def parse_mf_results(mf):
                 raise TypeError("Don't know how to handle '%s'" % repr(src))
 
     # sort on the file names, the output is nicer to read
-    py_files.sort(lambda a,b:cmp(a.filename, b.filename))
-    extensions.sort(lambda a,b:cmp(a.filename, b.filename))
+    py_files.sort(key=lambda a: a.filename)
+    extensions.sort(key=lambda a: a.filename)
     return py_files, extensions
 
 
@@ -213,10 +206,7 @@ def find_needed_modules(mf=None, scripts=(), includes=(), packages=(), warn=warn
 # resource constants
 #
 PY_SUFFIXES = ['.py', '.pyw', '.pyo', '.pyc']
-C_SUFFIXES = [
-    _triple[0] for _triple in imp.get_suffixes()
-    if _triple[2] == imp.C_EXTENSION
-]
+C_SUFFIXES = list(importlib.machinery.EXTENSION_SUFFIXES)
 
 #
 # side-effects
@@ -226,7 +216,7 @@ def _replacePackages():
     REPLACEPACKAGES = {
         '_xmlplus':     'xml',
     }
-    for k,v in REPLACEPACKAGES.iteritems():
+    for k,v in REPLACEPACKAGES.items():
         modulegraph.ReplacePackage(k, v)
 
 _replacePackages()

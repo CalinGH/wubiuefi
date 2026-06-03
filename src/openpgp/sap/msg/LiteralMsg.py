@@ -51,13 +51,13 @@ def create_LiteralMsg(literals):
 
     for lit in literals: # assume 'data' is present, allow defaults for rest
 
-        if not lit.has_key('modified'):
+        if not 'modified' in lit:
             lit['modified'] = int(time.time())
 
-        if not lit.has_key('format'):
+        if not 'format' in lit:
             lit['format'] = 'b'
 
-        if not lit.has_key('filename'):
+        if not 'filename' in lit:
             lit['filename'] = "sap_out_%s" % i
 
         litbody = create_LiteralDataBody(lit)

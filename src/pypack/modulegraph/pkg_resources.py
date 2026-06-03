@@ -13,7 +13,20 @@ The package resource API is designed to work with normal filesystem packages,
 method.
 """
 
-import sys, os, zipimport, time, re, imp, new
+import sys, os, zipimport, time, re, types
+try:
+    import imp
+except ImportError:
+    # ``imp`` was removed in Python 3.12.  This vendored copy of
+    # pkg_resources is normally shadowed by setuptools' own at runtime under
+    # Python 3, so just keep the name defined so the module imports cleanly.
+    imp = None
+new = types
+
+
+def cmp(a, b):
+    """Python 2 ``cmp`` builtin, removed in Python 3."""
+    return (a > b) - (a < b)
 
 try:
     frozenset
@@ -135,7 +148,7 @@ def _macosx_vers(_cache=[]):
                 _cache.append(value.strip().split("."))
                 break
         else:
-            raise ValueError, "What?!"
+            raise ValueError("What?!")
     return _cache[0]
 
 def _macosx_arch(machine):
@@ -227,7 +240,7 @@ run_main = run_script   # backward compatibility
 
 def get_distribution(dist):
     """Return a current distribution object for a Requirement or string"""
-    if isinstance(dist,basestring): dist = Requirement.parse(dist)
+    if isinstance(dist,str): dist = Requirement.parse(dist)
     if isinstance(dist,Requirement): dist = get_provider(dist)
     if not isinstance(dist,Distribution):
         raise TypeError("Expected string, Requirement, or Distribution", dist)
@@ -500,7 +513,7 @@ class WorkingSet(object):
             env = full_env + plugin_env
 
         shadow_set = self.__class__([])
-        map(shadow_set.add, self)   # put all our entries in shadow_set
+        list(map(shadow_set.add, self))   # put all our entries in shadow_set
 
         for project_name in plugin_projects:
 
@@ -822,7 +835,7 @@ variable to point to an accessible directory.
 
         if os.name == 'posix':
             # Make the resource executable
-            mode = ((os.stat(tempname).st_mode) | 0555) & 07777
+            mode = ((os.stat(tempname).st_mode) | 0o555) & 0o7777
             os.chmod(tempname, mode)
 
     def set_extraction_path(self, path):
@@ -994,14 +1007,15 @@ class NullProvider:
         script_filename = self._fn(self.egg_info,script)
         namespace['__file__'] = script_filename
         if os.path.exists(script_filename):
-            execfile(script_filename, namespace, namespace)
+            with open(script_filename) as _sf:
+                exec(compile(_sf.read(), script_filename, 'exec'), namespace, namespace)
         else:
             from linecache import cache
             cache[script_filename] = (
                 len(script_text), 0, script_text.split('\n'), script_filename
             )
             script_code = compile(script_text,script_filename,'exec')
-            exec script_code in namespace, namespace
+            exec(script_code, namespace, namespace)
 
     def _has(self, path):
         raise NotImplementedError(
@@ -1403,11 +1417,7 @@ register_finder(zipimport.zipimporter, find_in_zip)
 
 def StringIO(*args, **kw):
     """Thunk to load the real StringIO on demand"""
-    global StringIO
-    try:
-        from cStringIO import StringIO
-    except ImportError:
-        from StringIO import StringIO
+    from io import StringIO
     return StringIO(*args,**kw)
 
 def find_nothing(importer, path_item, only=False):
@@ -1444,7 +1454,7 @@ def find_on_path(importer, path_item, only=False):
                     for dist in find_distributions(os.path.join(path_item, entry)):
                         yield dist
                 elif not only and lower.endswith('.egg-link'):
-                    for line in file(os.path.join(path_item, entry)):
+                    for line in open(os.path.join(path_item, entry)):
                         if not line.strip(): continue
                         for item in find_distributions(os.path.join(path_item,line.rstrip())):
                             yield item
@@ -1481,7 +1491,7 @@ def _handle_ns(packageName, path_item):
         return None
     module = sys.modules.get(packageName)
     if module is None:
-        module = sys.modules[packageName] = new.module(packageName)
+        module = sys.modules[packageName] = types.ModuleType(packageName)
         module.__path__ = []; _set_parent_ns(packageName)
     elif not hasattr(module,'__path__'):
         raise TypeError("Not a package:", packageName)
@@ -1576,7 +1586,7 @@ def _set_parent_ns(packageName):
 
 def yield_lines(strs):
     """Yield non-empty/non-comment lines of a ``basestring`` or sequence"""
-    if isinstance(strs,basestring):
+    if isinstance(strs,str):
         for s in strs.splitlines():
             s = s.strip()
             if s and not s.startswith('#'):     # skip blank lines/comments
@@ -1912,7 +1922,7 @@ class Distribution(object):
     def __getattr__(self,attr):
         """Delegate all unrecognized public attributes to .metadata provider"""
         if attr.startswith('_'):
-            raise AttributeError,attr
+            raise AttributeError(attr)
         return getattr(self._provider, attr)
 
     #@classmethod
@@ -2060,7 +2070,7 @@ def parse_requirements(strs):
         while not TERMINATOR(line,p):
             if CONTINUE(line,p):
                 try:
-                    line = lines.next(); p = 0
+                    line = next(lines); p = 0
                 except StopIteration:
                     raise ValueError(
                         "\\ must not appear on the last nonblank line"
@@ -2135,9 +2145,9 @@ class Requirement:
 
     def __contains__(self,item):
         if isinstance(item,Distribution):
-            if item.key <> self.key: return False
+            if item.key != self.key: return False
             if self.index: item = item.parsed_version  # only get if we need it
-        elif isinstance(item,basestring):
+        elif isinstance(item,str):
             item = parse_version(item)
         last = None
         for parsed,trans,op,ver in self.index:
@@ -2268,5 +2278,5 @@ run_main = run_script   # backward compatibility
 # all distributions added to the working set in the future (e.g. by
 # calling ``require()``) will get activated as well.
 add_activation_listener(lambda dist: dist.activate())
-working_set.entries=[]; map(working_set.add_entry,sys.path) # match order
+working_set.entries=[]; list(map(working_set.add_entry,sys.path)) # match order
 

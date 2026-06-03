@@ -89,12 +89,12 @@ CUSTOMIZATION
 # $Id: mirror.py,v 1.14 2006/02/22 18:26:46 mstenner Exp $
 
 import random
-import thread  # needed for locking to make this threadsafe
+import _thread as thread  # needed for locking to make this threadsafe
 
-from grabber import URLGrabError, CallbackObject, DEBUG
+from .grabber import URLGrabError, CallbackObject, DEBUG
 
 try:
-    from i18n import _
+    from .i18n import _
 except ImportError as msg:
     def _(st): return st
 

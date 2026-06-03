@@ -203,7 +203,7 @@ class SignatureSubpacket:
             self.value = STN.str2int(value_d[:1])
 
             if self.value not in [0, 1]:
-                raise SignatureSubpacketValueError, "Subpacket (# %s) value must be 0 or 1." % (str(subtype))
+                raise SignatureSubpacketValueError("Subpacket (# %s) value must be 0 or 1." % (str(subtype)))
 
         elif SIGSUB_TRUST == self.type: # level, amount
             self.value = (STN.str2int(value_d[0]), STN.str2int(value_d[1]))
@@ -232,7 +232,7 @@ class SignatureSubpacket:
             self.value = (STN.str2int(value_d[0]), value_d[1:])
 
         elif SIGSUB_SIGTARGET == self.type:
-            raise NotImplementedError, "SIGTARGET not supported"
+            raise NotImplementedError("SIGTARGET not supported")
 
         else: # the subpacket has an unknown type, so just pack the data in
             self.value = value_d
@@ -342,7 +342,7 @@ def create_SignatureBody(*args, **kwords):
         _d.append(''.join([x._d for x in signature]))
 
     else:
-        raise PGPValueError, "Unsupported signature algorithm %s." % algorithm
+        raise PGPValueError("Unsupported signature algorithm %s." % algorithm)
 
     return SignatureBody(''.join(_d))
 
@@ -354,7 +354,7 @@ def __cat_subpkt_block(subpkts):
     if 2 >= len(subpkt_d_len):
         return STN.prepad(2, subpkt_d_len) + subpkt_d
     else:
-        raise PGPValueError, "Subpacket block length (%s) is unacceptable." % len(subpkt_d_len)
+        raise PGPValueError("Subpacket block length (%s) is unacceptable." % len(subpkt_d_len))
 
 def create_SignatureSubpacket(type, value):
     """Create a SignatureSubpacket instance.
@@ -461,7 +461,7 @@ def create_SignatureSubpacket(type, value):
         value_d = STN.int2str(value[0]) + value[1]
 
     elif SIGSUB_SIGTARGET == type:
-        raise NotImplementedError, "SIGTARGET not supported"
+        raise NotImplementedError("SIGTARGET not supported")
 
     else: # subpacket is an unknown type, so just pack the data in
         value_d = value

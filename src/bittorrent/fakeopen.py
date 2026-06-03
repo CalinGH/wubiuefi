@@ -1,8 +1,6 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from string import join
-
 class FakeHandle:
     def __init__(self, name, fakeopen):
         self.name = name
@@ -25,10 +23,10 @@ class FakeHandle:
             return ''
         if amount is None:
             self.pos = len(f)
-            return join(f[old:], '')
+            return ''.join(f[old:])
         else:
             self.pos = min(len(f), old + amount)
-            return join(f[old:self.pos], '')
+            return ''.join(f[old:self.pos])
     
     def write(self, s):
         f = self.fakeopen.files[self.name]
@@ -49,7 +47,7 @@ class FakeOpen:
         return FakeHandle(filename, self)
 
     def exists(self, file):
-        return self.files.has_key(file)
+        return file in self.files
 
     def getsize(self, file):
         return len(self.files[file])

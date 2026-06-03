@@ -113,25 +113,25 @@ class SecretKeyBody(PublicKeyBody):
                 elif 1 == self.alg_sym: # IDEA [IDEA]
                     self.iv, idx = STN.strcalc(None, d[idx:idx+8], idx)
                 elif 2 == self.alg_sym: # Triple-DES DES-EDE, 168 bit key derived from 192
-                    raise NotImplementedError, "3DES"
+                    raise NotImplementedError("3DES")
                 elif 3 == self.alg_sym: # CAST5 (128 bit key, as per RFC2144)
                     self.iv, idx = STN.strcalc(None, d[idx:idx+8], idx)
                 elif 4 == self.alg_sym: # Blowfish (128 bit key, 16 rounds)
                     self.iv, idx = STN.strcalc(None, d[idx:idx+8], idx)
                 elif self.alg_sym in [5, 6]: # Reserved
-                    raise NotImplementedError, "Reserved"
+                    raise NotImplementedError("Reserved")
                 elif 7 == self.alg_sym: # AES with 128-bit key [AES]
-                    raise NotImplementedError, "AES 128"
+                    raise NotImplementedError("AES 128")
                 elif 8 == self.alg_sym: # AES with 192-bit key
-                    raise NotImplementedError, "AES 192"
+                    raise NotImplementedError("AES 192")
                 elif 9 == self.alg_sym: # AES with 256-bit key
-                    raise NotImplementedError, "AES 256"
+                    raise NotImplementedError("AES 256")
                 elif 10 == self.alg_sym: # Twofish with 256-bit key [TWOFISH]
-                    raise NotImplementedError, "Twofish"
+                    raise NotImplementedError("Twofish")
                 elif self.alg_sym in range(100, 111): #100-110 Private/Experimental
-                    raise NotImplementedError, "Private/Experimental"
+                    raise NotImplementedError("Private/Experimental")
                 else:
-                    raise ValueError, "Unsupported symmetric encryption algorithm->(%s)" % (str(self.alg_sym))
+                    raise ValueError("Unsupported symmetric encryption algorithm->(%s)" % (str(self.alg_sym)))
 
             else: # s2k usage specifies the symmetric algorithm
                 self.alg_sym = self.s2k_usg

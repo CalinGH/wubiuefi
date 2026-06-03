@@ -2,7 +2,7 @@
 """
 #TODO: pgpwarn() is ugly. Kill it. Same goes for EXCEPT, WARN, and SUPRESS
 import logging
-import StringIO
+import io as StringIO
 import copy
 
 from os import linesep

@@ -1,14 +1,14 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from cStringIO import StringIO
+from io import StringIO
 from binascii import b2a_hex
 from socket import error as socketerror
 
 protocol_name = 'BitTorrent protocol'
 
 def toint(s):
-    return long(b2a_hex(s), 16)
+    return int(b2a_hex(s), 16)
 
 def tobinary(i):
     return (chr(i >> 24) + chr((i >> 16) & 0xFF) + 
@@ -124,7 +124,7 @@ class Connection:
             self.buffer.write(s[:i])
             s = s[i:]
             m = self.buffer.getvalue()
-            self.buffer.reset()
+            self.buffer.seek(0)
             self.buffer.truncate()
             try:
                 x = self.next_func(m)

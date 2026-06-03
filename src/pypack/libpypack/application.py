@@ -27,7 +27,8 @@ from os.path import basename, dirname
 import py_compile
 from optparse import OptionParser
 import logging
-from version import *
+from libpypack.version import (
+    APPLICATION_NAME, APPLICATION_VERSION, APPLICATION_REVISION)
 
 log = logging.getLogger(__name__)
 
@@ -48,18 +49,18 @@ class Application(object):
             import gettext
             gettext.install(APPLICATION_NAME)
         except ImportError:
-            import __builtin__
+            import builtins
             def dummytrans (text):
                 """A _ function for systems without gettext. Effectively a NOOP"""
                 return text
-            __builtin__.__dict__['_'] = dummytrans
+            builtins.__dict__['_'] = dummytrans
 
     def print_readme(self):
         readme = ajoin(self.root_dir, 'README')
         readme = open(readme, 'r')
         content = readme.read()
         readme.close()
-        print content
+        print(content)
 
     def parse_commandline_arguments(self):
         usage = "%prog [options] main_script [extra extra extra]"
@@ -75,7 +76,7 @@ class Application(object):
         options, args = parser.parse_args()
         self.options, args = parser.parse_args()
         if options.readme:
-            print self.print_readme()
+            print(self.print_readme())
             sys.exit(0)
         if not len(args):
             parser.print_help()
@@ -92,7 +93,7 @@ class Application(object):
         self.out_dir = self.options.out_dir
         self.out_dir = ajoin(self.out_dir)
         if os.path.exists(self.out_dir):
-            print 'ERROR: the build directory "%s" already exists.\nRemove that before running %s again.' % (self.out_dir, APPLICATION_NAME)
+            print('ERROR: the build directory "%s" already exists.\nRemove that before running %s again.' % (self.out_dir, APPLICATION_NAME))
             sys.exit(1)
         self.lib_dir = ajoin(self.out_dir, 'lib')
         os.makedirs(self.lib_dir)
@@ -123,7 +124,7 @@ class Application(object):
             for m in get_modules(script):
                 modules.append(m)
         for m in modules:
-            print m
+            print(m)
 
     def add_dependencies(self, script):
         '''
@@ -191,7 +192,7 @@ class Application(object):
                 log.debug("copying %s -> %s", extra, target)
                 shutil.copytree(extra, target, symlinks=False)
             else:
-                print 'ERROR: The extra argument "%s" cannot be found' % extra
+                print('ERROR: The extra argument "%s" cannot be found' % extra)
                 sys.exit(1)
 
 

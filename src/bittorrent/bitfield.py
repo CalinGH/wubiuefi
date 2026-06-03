@@ -1,19 +1,8 @@
 # Written by Bram Cohen, Uoti Urpala, and John Hoffman
 # see LICENSE.txt for license information
 
-try:
-    True
-except:
-    True = 1
-    False = 0
-    bool = lambda x: not not x
+negsum = lambda a: len(a)-sum(a)
 
-try:
-    sum([1])
-    negsum = lambda a: len(a)-sum(a)
-except:
-    negsum = lambda a: reduce(lambda x,y: x+(not y), a, 0)
-    
 def _int_to_booleans(x):
     r = []
     for i in range(8):
@@ -24,7 +13,7 @@ def _int_to_booleans(x):
 lookup_table = [_int_to_booleans(i) for i in range(256)]
 
 reverse_lookup_table = {}
-for i in xrange(256):
+for i in range(256):
     reverse_lookup_table[lookup_table[i]] = chr(i)
 
 
@@ -64,7 +53,7 @@ class Bitfield:
         booleans = self.array
         t = reverse_lookup_table
         s = len(booleans) % 8
-        r = [ t[tuple(booleans[x:x+8])] for x in xrange(0, len(booleans)-s, 8) ]
+        r = [ t[tuple(booleans[x:x+8])] for x in range(0, len(booleans)-s, 8) ]
         if s:
             r += t[tuple(booleans[-s:] + ([0] * (8-s)))]
         return ''.join(r)

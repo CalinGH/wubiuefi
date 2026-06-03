@@ -8,10 +8,11 @@
 # by Robert Stone 2/22/2003 
 #
 
-from urllib import *
-from urllib2 import *
+from urllib.request import urlopen, build_opener, install_opener, HTTPHandler
+from urllib.response import addinfourl
+from urllib.parse import quote, unquote
 from gzip import GzipFile
-from StringIO import StringIO
+from io import StringIO
 from __init__ import version
 import pprint
 
@@ -27,22 +28,22 @@ class HTTPContentEncodingHandler(HTTPHandler):
         req.add_header("Accept-Encoding","gzip")
         req.add_header('User-Agent', 'BitTorrent/' + version)
         if DEBUG: 
-            print "Sending:" 
-            print req.headers
-            print "\n"
+            print("Sending:")
+            print(req.headers)
+            print("\n")
         fp = HTTPHandler.http_open(self,req)
         headers = fp.headers
         if DEBUG: 
              pprint.pprint(headers.dict)
         url = fp.url
-	resp = addinfourldecompress(fp, headers, url)
-	# As of Python 2.4 http_open response also has 'code' and 'msg'
+        resp = addinfourldecompress(fp, headers, url)
+        # As of Python 2.4 http_open response also has 'code' and 'msg'
         # members, and HTTPErrorProcessor breaks if they don't exist.
-	if 'code' in dir(fp):
-	    resp.code = fp.code
-	if 'msg' in dir(fp):
-	    resp.msg = fp.msg
-	return resp
+        if 'code' in dir(fp):
+            resp.code = fp.code
+        if 'msg' in dir(fp):
+            resp.msg = fp.msg
+        return resp
 
 class addinfourldecompress(addinfourl):
     """Do gzip decompression if necessary. Do addinfourl stuff too."""
@@ -52,9 +53,9 @@ class addinfourldecompress(addinfourl):
         # basically this only works for the most simplistic case and will
         # break in some other cases, but for now we only care about making
         # this work with the BT tracker so....
-        if headers.has_key('content-encoding') and headers['content-encoding'] == 'gzip':
+        if 'content-encoding' in headers and headers['content-encoding'] == 'gzip':
             if DEBUG:
-                print "Contents of Content-encoding: " + headers['Content-encoding'] + "\n"
+                print("Contents of Content-encoding: " + headers['Content-encoding'] + "\n")
             self.gzip = 1
             self.rawfp = fp
             fp = GzipStream(fp)
@@ -119,26 +120,26 @@ def test():
        At the moment this is lame.
     """
 
-    print "Running unit tests.\n"
+    print("Running unit tests.\n")
 
     def printcomp(fp):
         try:
             if fp.iscompressed():
-                print "GET was compressed.\n"
+                print("GET was compressed.\n")
             else:
-                print "GET was uncompressed.\n"
+                print("GET was uncompressed.\n")
         except:
-            print "no iscompressed function!  this shouldn't happen"
+            print("no iscompressed function!  this shouldn't happen")
 
-    print "Trying to GET a compressed document...\n"
+    print("Trying to GET a compressed document...\n")
     fp = urlopen('http://a.scarywater.net/hng/index.shtml')
-    print fp.read()
+    print(fp.read())
     printcomp(fp)
     fp.close()
 
-    print "Trying to GET an unknown document...\n"
+    print("Trying to GET an unknown document...\n")
     fp = urlopen('http://www.otaku.org/')
-    print fp.read()
+    print(fp.read())
     printcomp(fp)
     fp.close()
 

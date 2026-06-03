@@ -25,7 +25,7 @@ class DownloaderFeedback:
     def _rotate(self):
         cs = self.choker.connections
         for id in self.lastids:
-            for i in xrange(len(cs)):
+            for i in range(len(cs)):
                 if cs[i].get_id() == id:
                     return cs[i:] + cs[:i]
         return cs

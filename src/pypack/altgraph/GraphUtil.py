@@ -119,4 +119,4 @@ if __name__ == '__main__':
     d.display()
     d.save_img()
 
-    print g
+    print(g)

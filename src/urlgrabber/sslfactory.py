@@ -16,8 +16,8 @@
 
 # This file is part of urlgrabber, a high-level cross-protocol url-grabber
 
-import httplib
-import urllib2
+import http.client as httplib
+import urllib.request as urllib2
 
 try:
     from M2Crypto import SSL

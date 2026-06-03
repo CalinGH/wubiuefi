@@ -3,8 +3,9 @@
 
 from select import select, error
 from time import sleep
-from types import IntType
 from bisect import bisect
+
+IntType = int
 POLLIN = 1
 POLLOUT = 2
 POLLERR = 8

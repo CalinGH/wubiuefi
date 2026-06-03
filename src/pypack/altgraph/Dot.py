@@ -190,7 +190,7 @@ class Dot(object):
         yield 'digraph %s {\n' % (self.name,)
 
         # write overall graph attributes
-        for attr_name, attr_value in self.attr.iteritems():
+        for attr_name, attr_value in self.attr.items():
             yield '%s="%s";' % (attr_name, attr_value)
         yield '\n'
 
@@ -199,9 +199,9 @@ class Dot(object):
         epatt  = '];\n'          # to end attributes
 
         # write node attributes
-        for node_name, node_attr in self.nodes.iteritems():
+        for node_name, node_attr in self.nodes.items():
             yield '\t"%s" [' % (node_name,)
-            for attr_name, attr_value in node_attr.iteritems():
+            for attr_name, attr_value in node_attr.items():
                 yield cpatt % (attr_name, attr_value)
             yield epatt
 
@@ -209,7 +209,7 @@ class Dot(object):
         for head in self.edges:
             for tail in self.edges[head]:
                 yield '\t"%s" -> "%s" [' % (head, tail)
-                for attr_name, attr_value in self.edges[head][tail].iteritems():
+                for attr_name, attr_value in self.edges[head][tail].items():
                     yield cpatt % (attr_name, attr_value)
                 yield epatt
 

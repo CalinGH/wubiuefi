@@ -2,6 +2,8 @@
 # This file created for Debian because btdownloadcurses can't 
 # find btdownloadheadless because we rename it.
 
+from io import StringIO
+
 def print_spew(spew):
     s = StringIO()
     s.write('\n\n\n')
@@ -41,4 +43,4 @@ def print_spew(spew):
         else:
             s.write(' ')
         s.write('\n')
-    print s.getvalue()
+    print(s.getvalue())

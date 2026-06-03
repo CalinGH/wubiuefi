@@ -40,7 +40,7 @@ def completedir(files, url, flag = Event(), vc = dummy, fc = dummy, piece_len_po
             print_exc()
 
 def dc(v):
-    print v
+    print(v)
 
 if __name__ == '__main__':
     completedir(argv[2:], argv[1], fc = dc)

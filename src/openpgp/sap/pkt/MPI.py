@@ -43,7 +43,7 @@ class MPI:
         - `_int_d`: MPI integer data string
     """
     def __init__(self, *args, **kwords):
-        if kwords.has_key('int'):
+        if 'int' in kwords:
             self.__create(kwords['int'])
         else:
             try:
@@ -70,7 +70,7 @@ class MPI:
         if self.check():
             pass
         else:
-            raise self.err[0], self.err[1]
+            raise self.err[0](self.err[1])
 
     def check(self):
         int_len = len(self._int_d)
@@ -103,7 +103,7 @@ def create_MPI(i):
     i_length_str = STN.int2str(bit_count)
 
     if 2 < len(i_length_str):
-        raise ValueError, "int is larger than two octets can specify - int occupies %s octets" % str(i_length)
+        raise ValueError("int is larger than two octets can specify - int occupies %s octets" % str(i_length))
 
     elif 1 == len(i_length_str):
         i_length_str = ''.join(['\x00', i_length_str])

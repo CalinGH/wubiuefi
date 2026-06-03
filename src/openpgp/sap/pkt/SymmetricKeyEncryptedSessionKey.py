@@ -115,7 +115,7 @@ def create_SymmetricKeyEncryptedSessionKeyBody(*args, **kwords):
         if 0 < version < 128:
             version = kwords['version']
         else:
-            raise PGPValueError, "Symmetric session key version %s is out of range." % version
+            raise PGPValueError("Symmetric session key version %s is out of range." % version)
     else:
         version = 4
 

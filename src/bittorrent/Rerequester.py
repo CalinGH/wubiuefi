@@ -17,7 +17,7 @@ class Rerequester:
             upratefunc, downratefunc, ever_got_incoming):
         self.url = ('%s?info_hash=%s&peer_id=%s&port=%s&key=%s' %
             (url, quote(infohash), quote(myid), str(port),
-            b2a_hex(''.join([chr(randrange(256)) for i in xrange(4)]))))
+            b2a_hex(''.join([chr(randrange(256)) for i in range(4)]))))
         if ip != '':
             self.url += '&ip=' + quote(ip)
         self.interval = interval
@@ -89,7 +89,7 @@ class Rerequester:
                     self.last_failed = False
                     self.postrequest(r)
                 self.externalsched(add, 0)
-        except (IOError, error), e:
+        except (IOError, error) as e:
             if set():
                 def fail(self = self, r = 'Problem connecting to tracker - ' + str(e)):
                     if self.last_failed:
@@ -101,10 +101,10 @@ class Rerequester:
         try:
             r = bdecode(data)
             check_peers(r)
-            if r.has_key('failure reason'):
+            if 'failure reason' in r:
                 self.errorfunc('rejected by tracker - ' + r['failure reason'])
             else:
-                if r.has_key('warning message'):
+                if 'warning message' in r:
                     self.errorfunc('warning from tracker - ' + r['warning message'])
                 self.announce_interval = r.get('interval', self.announce_interval)
                 self.interval = r.get('min interval', self.interval)
@@ -113,7 +113,7 @@ class Rerequester:
                 p = r['peers']
                 peers = []
                 if type(p) == type(''):
-                    for x in xrange(0, len(p), 6):
+                    for x in range(0, len(p), 6):
                         ip = '.'.join([str(ord(i)) for i in p[x:x+4]])
                         port = (ord(p[x+4]) << 8) | ord(p[x+5])
                         peers.append((ip, port, None))

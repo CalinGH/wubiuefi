@@ -62,7 +62,7 @@ class PublicKeyEncryptedSessionKeyBody:
             self.ELGAMAL_myk_modp, idx = MPI.strcalc_mpi(d[idx:], idx)
 
         else:
-            raise PGPValueError, "Unsupported public key algorithm. Received alg_pubkey->(%s)" % self.alg_pubkey
+            raise PGPValueError("Unsupported public key algorithm. Received alg_pubkey->(%s)" % self.alg_pubkey)
  
 
 def create_PublicKeyEncryptedSessionKeyBody(*args, **kwords):
@@ -82,7 +82,7 @@ def create_PublicKeyEncryptedSessionKeyBody(*args, **kwords):
         b_d = MPI.create_MPI(kwords['mpis'][1])._d
         mpi_d = ''.join([a_d, b_d])
     else:
-        raise PGPValueError, "Unsupported public key algorithm. Received alg->(%s)" % alg
+        raise PGPValueError("Unsupported public key algorithm. Received alg->(%s)" % alg)
     _d = ''.join([version, keyid, algorithm, mpi_d])
     return PublicKeyEncryptedSessionKeyBody(_d)
 

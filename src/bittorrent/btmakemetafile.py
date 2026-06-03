@@ -6,9 +6,8 @@
 from sys import argv
 from os.path import getsize, split, join, abspath, isdir
 from os import listdir
-from sha import sha
+from hashlib import sha1 as sha
 from copy import copy
-from string import strip
 from BitTorrent.bencode import bencode
 from BitTorrent.btformats import check_info
 from BitTorrent.parseargs import parseargs, formatDefinitions
@@ -47,7 +46,7 @@ def make_meta_file(file, url, piece_len_exp = 18,
         return
     check_info(info)
     h = open(f, 'wb')
-    data = {'info': info, 'announce': strip(url), 'creation date': long(time())}
+    data = {'info': info, 'announce': url.strip(), 'creation date': int(time())}
     if comment:
         data['comment'] = comment
     h.write(bencode(data))
@@ -139,19 +138,19 @@ def subfiles(d):
     return r
 
 def prog(amount):
-    print '%.1f%% complete\r' % (amount * 100),
+    print('%.1f%% complete\r' % (amount * 100), end=' ')
 
 if __name__ == '__main__':
     if len(argv) < 3:
-        print 'usage is -'
-        print argv[0] + ' file trackerurl [params]'
-        print
-        print formatDefinitions(defaults, 80)
+        print('usage is -')
+        print(argv[0] + ' file trackerurl [params]')
+        print()
+        print(formatDefinitions(defaults, 80))
     else:
         try:
             config, args = parseargs(argv[3:], defaults, 0, 0)
             make_meta_file(argv[1], argv[2], config['piece_size_pow2'], progress = prog,
                 comment = config['comment'], target = config['target'])
         except ValueError as e:
-            print 'error: ' + str(e)
-            print 'run with no args for parameter explanations'
+            print('error: ' + str(e))
+            print('run with no args for parameter explanations')

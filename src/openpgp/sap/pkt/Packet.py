@@ -1,7 +1,7 @@
 "Basic packet support RFC 2440.4"
 
 import types
-import StringIO
+import io as StringIO
 
 from openpgp.sap.util import strnum as STN
 from openpgp.sap.exceptions import *
@@ -102,7 +102,7 @@ class Tag:
                 self.type = ord_d & 63
 
             else:
-                raise PGPError, "Fix me." # just to be sure
+                raise PGPError("Fix me.") # just to be sure
 
             self._d = d
 
@@ -151,7 +151,7 @@ class OldLength:
         elif 0 == len(d):
             self._d, self.size = '', "UNDEFINED"
         else:
-            raise PGPFormatError, "Old packet length data must come in 0, 1, 2, or 4 octets. Received->(%s octets)." % (str(len(d)))
+            raise PGPFormatError("Old packet length data must come in 0, 1, 2, or 4 octets. Received->(%s octets)." % (str(len(d))))
 
 
 class NewLength:
@@ -195,7 +195,7 @@ class NewLength:
         size, length_list = self.get_size(d)
         # catch last partial
         if 224 <= self.get_size(length_list[-1])[0] <= 254:
-            raise PGPFormatError, "Last length specifier must not be a partial length."
+            raise PGPFormatError("Last length specifier must not be a partial length.")
         else:
             self.size = size
 
@@ -366,7 +366,7 @@ class Packet:
                 bodydata.append(d[idx:idx+size])
 
             else:
-                raise PGPError, "Extreme weirdness. Fix source."
+                raise PGPError("Extreme weirdness. Fix source.")
             self.length = NewLength(''.join(lengthdata))
             self.fill_body(''.join(bodydata))
 
@@ -375,7 +375,7 @@ class Packet:
         if self.check():
             return 1
         else:
-            raise self.err[0], self.err[1]
+            raise self.err[0](self.err[1])
 
     # is this really necessary?
     # TODO - tag.type == body.type

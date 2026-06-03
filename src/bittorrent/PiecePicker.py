@@ -7,13 +7,13 @@ class PiecePicker:
     def __init__(self, numpieces, rarest_first_cutoff = 1):
         self.rarest_first_cutoff = rarest_first_cutoff
         self.numpieces = numpieces
-        self.interests = [range(numpieces)]
-        self.pos_in_interests = range(numpieces)
+        self.interests = [list(range(numpieces))]
+        self.pos_in_interests = list(range(numpieces))
         self.numinterests = [0] * numpieces
         self.started = []
         self.seedstarted = []
         self.numgot = 0
-        self.scrambled = range(numpieces)
+        self.scrambled = list(range(numpieces))
         shuffle(self.scrambled)
 
     def got_have(self, piece):
@@ -90,7 +90,7 @@ class PiecePicker:
                 if havefunc(i):
                     return i
             return None
-        for i in xrange(1, min(bestnum, len(self.interests))):
+        for i in range(1, min(bestnum, len(self.interests))):
             for j in self.interests[i]:
                 if havefunc(j):
                     return j

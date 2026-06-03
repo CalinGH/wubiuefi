@@ -1,5 +1,3 @@
-from itertools import imap
-
 from altgraph.compat import *
 from altgraph.Graph import Graph
 from altgraph.GraphUtil import filter_stack
@@ -154,7 +152,7 @@ class ObjectGraph(object):
         Print a debug message with the given level
         """
         if s and level <= self.debug:
-            print "%s%s %s" % ("    " * self.indent, s, ' '.join(map(repr, args)))
+            print("%s%s %s" % ("    " * self.indent, s, ' '.join(map(repr, args))))
 
     def msgin(self, level, s, *args):
         """

@@ -93,12 +93,12 @@ def create_LiteralDataBody(*args, **kwords):
     filename = kwords.setdefault('filename', 'outfile')
 
     if format not in ['b', 't']:
-        raise PGPValueError, "Literal data format must be 'b' or 't'. Received->(%s)" % str(format)
+        raise PGPValueError("Literal data format must be 'b' or 't'. Received->(%s)" % str(format))
 
     fnlen_d = STN.int2str(len(filename))
 
     if 1 < len(fnlen_d):
-        raise PGPValueError, "Filename length (%s) exceeded 1 octet capacity." % len(fnlen_d)
+        raise PGPValueError("Filename length (%s) exceeded 1 octet capacity." % len(fnlen_d))
 
     modified_d = STN.prepad(4, STN.int2str(modified))
     d = ''.join([format, fnlen_d, filename, modified_d, data])

@@ -64,7 +64,7 @@ def str2int(s):
         return a long() if an OverflowError is triggered. Don't know if this is
         good behavior..
     """
-    l = 0L
+    l = 0
 
     for i in map(ord, s):
         l = (l * 256) + i
@@ -126,7 +126,7 @@ def int2quadoct(i):
 
     except struct.error:
         raise ValueError("Please use a number. Received %s" % i)
-        print sys.exc_info()[:2]
+        print(sys.exc_info()[:2])
 
 
 
@@ -239,7 +239,7 @@ def int2partial(i):
         if value == i:
             return chr(str2int(chr(224 + power)))
 
-    raise ValueError, "Partial length must be in range 2**x for 0<=x<=30."
+    raise ValueError("Partial length must be in range 2**x for 0<=x<=30.")
 
 def partial2int(s):
     """Return the value of a partial length byte. 
@@ -278,7 +278,7 @@ def mpilen2int(s):
         return (L + 7) / 8
 
     else:
-        raise ValueError, "MPI length must be a 2 character string."
+        raise ValueError("MPI length must be a 2 character string.")
 
 def sigbits(c):
     """Find out how many bits are used in an octet. 

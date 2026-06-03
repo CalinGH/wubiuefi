@@ -65,7 +65,7 @@ class Armored:
         # if we encounter a starting block before another has finished,
         # the previous data is ditched and we start again
         if line in armor_header_lines:
-            if self.__dict__.has_key('title') and 'SIGNED MESSAGE' == self.title and '-----BEGIN PGP SIGNATURE-----' == line:
+            if 'title' in self.__dict__ and 'SIGNED MESSAGE' == self.title and '-----BEGIN PGP SIGNATURE-----' == line:
                 if '' == self.__datalines[-1]:
                     self.__datalines.append('') # ugh.
                 self.signed = os.linesep.join(self.__datalines)

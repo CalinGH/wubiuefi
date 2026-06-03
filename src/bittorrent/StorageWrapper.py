@@ -1,7 +1,7 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from sha import sha
+from hashlib import sha1 as sha
 from threading import Event
 from bitfield import Bitfield
 
@@ -24,9 +24,9 @@ class StorageWrapper:
         self.total_length = storage.get_total_length()
         self.amount_left = self.total_length
         if self.total_length <= piece_size * (len(hashes) - 1):
-            raise ValueError, 'bad data from tracker - total too small'
+            raise ValueError('bad data from tracker - total too small')
         if self.total_length > piece_size * len(hashes):
-            raise ValueError, 'bad data from tracker - total too big'
+            raise ValueError('bad data from tracker - total too big')
         self.finished = finished
         self.failed = failed
         self.numactive = [0] * len(hashes)
@@ -42,7 +42,7 @@ class StorageWrapper:
             return
         targets = {}
         total = len(hashes)
-        for i in xrange(len(hashes)):
+        for i in range(len(hashes)):
             if not self._waspre(i):
                 targets.setdefault(hashes[i], []).append(i)
                 total -= 1
@@ -58,7 +58,7 @@ class StorageWrapper:
             self.inactive_requests[piece] = None
             self.waschecked[piece] = check_hashes
         lastlen = self._piecelen(len(hashes) - 1)
-        for i in xrange(len(hashes)):
+        for i in range(len(hashes)):
             if not self._waspre(i):
                 self.holes.append(i)
             elif not check_hashes:
@@ -141,9 +141,9 @@ class StorageWrapper:
             return True
 
     def _piece_came_in(self, index, begin, piece):
-        if not self.places.has_key(index):
+        if not index in self.places:
             n = self.holes.pop(0)
-            if self.places.has_key(n):
+            if n in self.places:
                 oldpos = self.places[n]
                 old = self.storage.read(self.piece_size * oldpos, self._piecelen(n))
                 if self.have[n] and sha(old).digest() != self.hashes[n]:
@@ -383,7 +383,7 @@ def test_total_too_short():
     try:
         StorageWrapper(ds, 4, [sha(chr(0xff) * 4).digest(),
             sha(chr(0xFF) * 4).digest()], 4, ds.finished, None)
-        raise 'fail'
+        raise Exception('fail')
     except ValueError:
         pass
 
@@ -392,7 +392,7 @@ def test_total_too_big():
     try:
         sw = StorageWrapper(ds, 4, [sha('qqqq').digest(),
             sha(chr(0xFF) * 4).digest()], 4, ds.finished, None)
-        raise 'fail'
+        raise Exception('fail')
     except ValueError:
         pass
 
@@ -412,32 +412,32 @@ from random import shuffle
 
 def test_alloc_random():
     ds = DummyStorage(101)
-    sw = StorageWrapper(ds, 1, [sha(chr(i)).digest() for i in xrange(101)], 1, ds.finished, None)
-    for i in xrange(100):
+    sw = StorageWrapper(ds, 1, [sha(chr(i)).digest() for i in range(101)], 1, ds.finished, None)
+    for i in range(100):
         assert sw.new_request(i) == (0, 1)
-    r = range(100)
+    r = list(range(100))
     shuffle(r)
     for i in r:
         sw.piece_came_in(i, 0, chr(i))
-    for i in xrange(100):
+    for i in range(100):
         assert sw.get_piece(i, 0, 1) == chr(i)
-    assert ds.s[:100] == ''.join([chr(i) for i in xrange(100)])
+    assert ds.s[:100] == ''.join([chr(i) for i in range(100)])
 
 def test_alloc_resume():
     ds = DummyStorage(101)
-    sw = StorageWrapper(ds, 1, [sha(chr(i)).digest() for i in xrange(101)], 1, ds.finished, None)
-    for i in xrange(100):
+    sw = StorageWrapper(ds, 1, [sha(chr(i)).digest() for i in range(101)], 1, ds.finished, None)
+    for i in range(100):
         assert sw.new_request(i) == (0, 1)
-    r = range(100)
+    r = list(range(100))
     shuffle(r)
     for i in r[:50]:
         sw.piece_came_in(i, 0, chr(i))
     assert ds.s[50:] == chr(0xFF) * 51
     ds.ranges = [(0, 50)]
-    sw = StorageWrapper(ds, 1, [sha(chr(i)).digest() for i in xrange(101)], 1, ds.finished, None)
+    sw = StorageWrapper(ds, 1, [sha(chr(i)).digest() for i in range(101)], 1, ds.finished, None)
     for i in r[50:]:
         sw.piece_came_in(i, 0, chr(i))
-    assert ds.s[:100] == ''.join([chr(i) for i in xrange(100)])
+    assert ds.s[:100] == ''.join([chr(i) for i in range(100)])
 
 def test_last_piece_pre():
     ds = DummyStorage(3, ranges = [(2, 1)])
@@ -457,11 +457,11 @@ def test_not_last_pre():
 def test_last_piece_not_pre():
     ds = DummyStorage(51, ranges = [(50, 1)])
     sw = StorageWrapper(ds, 2, [sha('aa').digest()] * 25 + [sha('b').digest()], 2, ds.finished, None)
-    for i in xrange(25):
+    for i in range(25):
         assert sw.new_request(i) == (0, 2)
     assert sw.new_request(25) == (0, 1)
     sw.piece_came_in(25, 0, 'b')
-    r = range(25)
+    r = list(range(25))
     shuffle(r)
     for i in r:
         sw.piece_came_in(i, 0, 'aa')

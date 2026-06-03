@@ -1,6 +1,34 @@
 import os
-import imp
 import sys
+
+try:
+    import imp
+except ImportError:
+    # ``imp`` was removed in Python 3.12.  Provide a minimal shim backed by
+    # importlib with just the pieces used in this module.  Note: the runtime
+    # behaviour of imp.find_module could not be reproduced exactly; this is a
+    # best-effort port for this build-time helper.
+    import importlib.machinery as _machinery
+    import importlib.util as _importlib_util
+
+    class imp(object):
+        C_BUILTIN = 6
+        PKG_DIRECTORY = 5
+        PY_SOURCE = 1
+
+        @staticmethod
+        def find_module(name, path=None):
+            spec = _machinery.PathFinder().find_spec(name, path)
+            if spec is None:
+                # Fall back to the default finders (builtins, frozen, ...).
+                spec = _importlib_util.find_spec(name)
+            if spec is None:
+                raise ImportError('No module named %s' % (name,))
+            if spec.submodule_search_locations:
+                pathname = list(spec.submodule_search_locations)[0]
+                return (None, pathname, ('', '', imp.PKG_DIRECTORY))
+            pathname = spec.origin
+            return (None, pathname, ('', 'rb', imp.PY_SOURCE))
 
 def imp_find_module(name, path=None):
     """

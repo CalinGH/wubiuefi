@@ -3,7 +3,7 @@
 
 from bisect import insort
 import socket
-from cStringIO import StringIO
+from io import StringIO
 from traceback import print_exc
 from errno import EWOULDBLOCK, ENOBUFS
 try:
@@ -76,7 +76,7 @@ class SingleSocket:
             self.raw_server.poll.register(self.socket, all)
 
 def default_error_handler(x):
-    print x
+    print(x)
 
 class RawServer:
     def __init__(self, doneflag, timeout_check_interval, timeout, noisy = True,

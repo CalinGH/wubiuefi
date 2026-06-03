@@ -1,7 +1,7 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from cStringIO import StringIO
+from io import StringIO
 from sys import stdout
 import time
 from gzip import GzipFile
@@ -66,10 +66,10 @@ class HTTPConnection:
         if data == '':
             self.donereading = True
             # check for Accept-Encoding: header, pick a 
-            if self.headers.has_key('accept-encoding'):
+            if 'accept-encoding' in self.headers:
                 ae = self.headers['accept-encoding']
                 if DEBUG:
-                    print "Got Accept-Encoding: " + ae + "\n"
+                    print("Got Accept-Encoding: " + ae + "\n")
             else:
                 #identity assumed if no header
                 ae = 'identity'
@@ -91,10 +91,11 @@ class HTTPConnection:
             return None
         self.headers[data[:i].strip().lower()] = data[i+1:].strip()
         if DEBUG:
-            print data[:i].strip() + ": " + data[i+1:].strip()
+            print(data[:i].strip() + ": " + data[i+1:].strip())
         return self.read_header
 
-    def answer(self, (responsecode, responsestring, headers, data)):
+    def answer(self, response):
+        (responsecode, responsestring, headers, data) = response
         if self.closed:
             return
         if self.encoding == 'gzip':
@@ -111,7 +112,7 @@ class HTTPConnection:
                 self.encoding = 'identity'
             else:
                 if DEBUG:
-                   print "Compressed: %i  Uncompressed: %i\n" % (len(cdata),len(data))
+                   print("Compressed: %i  Uncompressed: %i\n" % (len(cdata),len(data)))
                 data = cdata
                 headers['Content-Encoding'] = 'gzip'
 
@@ -124,9 +125,9 @@ class HTTPConnection:
         referer = self.headers.get('referer','-')
         useragent = self.headers.get('user-agent','-')
         year, month, day, hour, minute, second, a, b, c = time.localtime(time.time())
-        print '%s %s %s [%02d/%3s/%04d:%02d:%02d:%02d] "%s" %i %i "%s" "%s"' % (
+        print('%s %s %s [%02d/%3s/%04d:%02d:%02d:%02d] "%s" %i %i "%s" "%s"' % (
             self.connection.get_ip(), ident, username, day, months[month], year, hour,
-            minute, second, self.header, responsecode, len(data), referer, useragent)
+            minute, second, self.header, responsecode, len(data), referer, useragent))
         t = time.time()
         if t - self.handler.lastflush > self.handler.minflush:
             self.handler.lastflush = t

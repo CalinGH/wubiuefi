@@ -19,7 +19,7 @@ class Choker:
         self.schedule(self._round_robin, 10)
         self.count += 1
         if self.count % 3 == 0:
-            for i in xrange(len(self.connections)):
+            for i in range(len(self.connections)):
                 u = self.connections[i].get_upload()
                 if u.is_choked() and u.is_interested():
                     self.connections = self.connections[i:] + self.connections[:i]

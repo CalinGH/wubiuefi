@@ -454,9 +454,9 @@ def cmd_verify(opts=None, args=None):
     if getattr(opts, 'armor', None):
         verifyopts['armor'] = True
 
-    print "signed", signed
+    print("signed", signed)
     #~ print "keys", keys
-    print "veryfyopts", verifyopts
+    print("veryfyopts", verifyopts)
     return verify_str(signed, keys, **verifyopts)
 
 def cmd_encrypt(opts=None, args=None):

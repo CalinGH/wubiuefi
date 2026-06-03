@@ -1,1 +1,1 @@
-from sets import *
+from .sets import BaseSet, Set, ImmutableSet

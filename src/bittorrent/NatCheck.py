@@ -1,7 +1,7 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from cStringIO import StringIO
+from io import StringIO
 from socket import error as socketerror
 
 protocol_name = 'BitTorrent protocol'
@@ -71,7 +71,7 @@ class NatCheck:
             self.buffer.write(s[:i])
             s = s[i:]
             m = self.buffer.getvalue()
-            self.buffer.reset()
+            self.buffer.seek(0)
             self.buffer.truncate()
             x = self.next_func(m)
             if x is None:

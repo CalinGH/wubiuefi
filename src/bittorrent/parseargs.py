@@ -1,8 +1,13 @@
 # Written by Bill Bumgarner and Bram Cohen
 # see LICENSE.txt for license information
 
-from types import *
-from cStringIO import StringIO
+from io import StringIO
+
+NoneType = type(None)
+StringType = str
+IntType = int
+LongType = int
+FloatType = float
 
 def formatDefinitions(options, COLS):
     s = StringIO()
@@ -53,7 +58,7 @@ def parseargs(argv, options, minargs = None, maxargs = None):
                 usage('parameter passed in at end with no value')
             key, value = argv[pos][2:], argv[pos+1]
             pos += 2
-            if not longkeyed.has_key(key):
+            if not key in longkeyed:
                 usage('unknown key --' + key)
             longname, default, doc = longkeyed[key]
             try:
@@ -61,7 +66,7 @@ def parseargs(argv, options, minargs = None, maxargs = None):
                 if t is NoneType or t is StringType:
                     config[longname] = value
                 elif t in (IntType, LongType):
-                    config[longname] = long(value)
+                    config[longname] = int(value)
                 elif t is FloatType:
                     config[longname] = float(value)
                 else:

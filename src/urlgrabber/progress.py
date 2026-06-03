@@ -22,7 +22,7 @@
 import sys
 import time
 import math
-import thread
+import _thread as thread
     
 class BaseMeter:
     def __init__(self):
@@ -481,10 +481,10 @@ def format_time(seconds, use_hours=0):
         else:         return '--:--'
     else:
         seconds = int(seconds)
-        minutes = seconds / 60
+        minutes = seconds // 60
         seconds = seconds % 60
         if use_hours:
-            hours = minutes / 60
+            hours = minutes // 60
             minutes = minutes % 60
             return '%02i:%02i:%02i' % (hours, minutes, seconds)
         else:
@@ -516,7 +516,7 @@ def format_number(number, SI=0, space=' '):
         depth  = depth + 1
         number = number / step
 
-    if type(number) == type(1) or type(number) == type(1L):
+    if type(number) == type(1):
         # it's an int or a long, which means it didn't get divided,
         # which means it's already short enough
         format = '%i%s%s'
