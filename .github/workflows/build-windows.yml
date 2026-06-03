@@ -11,6 +11,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    # Suppress Wine's interactive wine-mono / wine-gecko install prompts, which
+    # otherwise block forever in headless CI.
+    env:
+      WINEDLLOVERRIDES: "mscoree=d;mshtml=d"
+      WINEDEBUG: "-all"
+      DISPLAY: ":99"
     steps:
       - uses: actions/checkout@v4
 
@@ -30,10 +36,16 @@ jobs:
             gcc-mingw-w64 binutils-mingw-w64 \
             gettext zip wget xz-utils
 
+      - name: Initialise Wine prefix
+        timeout-minutes: 10
+        run: |
+          export WINEPREFIX="$GITHUB_WORKSPACE/wine"
+          xvfb-run -a wineboot -i || true
+          # Give Wine a moment to finish first-run setup, then confirm it works.
+          xvfb-run -a wine cmd /c echo wine-ok
+
       - name: Build wubi.exe
-        env:
-          WINEDEBUG: "-all"
-          DISPLAY: ":99"
+        timeout-minutes: 40
         run: |
           # check_wine/check_winboot are scripted and self-bootstrapping
           # (they download the Wine Python 3.12 + PyInstaller and generate
