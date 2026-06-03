@@ -427,6 +427,69 @@ class Frontend(object):
         result = ctypes.wintypes.windll.user32.MessageBoxW(self.main_window._hwnd, str(message), str(title), defs.MB_RETRYCANCEL)
         return result == defs.IDRETRY
 
+    def select_file(self, title=None, wildcard=None, initial_dir=None):
+        '''
+        Show the native "Open file" dialog (comdlg32 GetOpenFileNameW) and
+        return the selected path as a string, or None if the user cancelled.
+
+        wildcard is a list of (label, pattern) pairs, e.g.
+        [("ISO images (*.iso)", "*.iso"), ("All files", "*.*")].
+        '''
+        wt = ctypes.wintypes
+        if wildcard is None:
+            wildcard = [(_("ISO images (*.iso)"), "*.iso"),
+                        (_("All files (*.*)"), "*.*")]
+        # The filter is a list of NUL-separated label/pattern pairs, the whole
+        # thing terminated by an extra NUL.
+        filter_str = "".join("%s\0%s\0" % (label, pattern)
+                             for (label, pattern) in wildcard) + "\0"
+        path_buf = ctypes.create_unicode_buffer(2048)
+
+        class OPENFILENAMEW(ctypes.Structure):
+            _fields_ = [
+                ("lStructSize", wt.DWORD),
+                ("hwndOwner", wt.HWND),
+                ("hInstance", wt.HINSTANCE),
+                ("lpstrFilter", wt.LPCWSTR),
+                ("lpstrCustomFilter", wt.LPWSTR),
+                ("nMaxCustFilter", wt.DWORD),
+                ("nFilterIndex", wt.DWORD),
+                ("lpstrFile", wt.LPWSTR),
+                ("nMaxFile", wt.DWORD),
+                ("lpstrFileTitle", wt.LPWSTR),
+                ("nMaxFileTitle", wt.DWORD),
+                ("lpstrInitialDir", wt.LPCWSTR),
+                ("lpstrTitle", wt.LPCWSTR),
+                ("Flags", wt.DWORD),
+                ("nFileOffset", wt.WORD),
+                ("nFileExtension", wt.WORD),
+                ("lpstrDefExt", wt.LPCWSTR),
+                ("lCustData", wt.LPARAM),
+                ("lpfnHook", wt.LPVOID),
+                ("lpTemplateName", wt.LPCWSTR),
+                ("pvReserved", wt.LPVOID),
+                ("dwReserved", wt.DWORD),
+                ("FlagsEx", wt.DWORD),
+            ]
+
+        OFN_HIDEREADONLY = 0x00000004
+        OFN_PATHMUSTEXIST = 0x00000800
+        OFN_FILEMUSTEXIST = 0x00001000
+
+        ofn = OPENFILENAMEW()
+        ofn.lStructSize = ctypes.sizeof(OPENFILENAMEW)
+        ofn.hwndOwner = self.main_window._hwnd
+        ofn.lpstrFilter = filter_str
+        ofn.lpstrFile = ctypes.cast(path_buf, wt.LPWSTR)
+        ofn.nMaxFile = len(path_buf)
+        ofn.lpstrTitle = title
+        ofn.lpstrInitialDir = initial_dir
+        ofn.Flags = OFN_HIDEREADONLY | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST
+
+        if ctypes.wintypes.windll.comdlg32.GetOpenFileNameW(ctypes.byref(ofn)):
+            return path_buf.value
+        return None
+
 class MainWindow(Window):
     '''
     Main Window

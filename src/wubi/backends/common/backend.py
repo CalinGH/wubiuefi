@@ -984,6 +984,26 @@ class Backend(object):
                         return iso, distro
         return None, None
 
+    def select_iso(self, iso_path):
+        '''
+        Validate a user-chosen ISO and, if it matches a supported distro,
+        record it as the ISO to install from. Returns the matching distro,
+        or None if the file is not a usable installation image.
+        '''
+        if not iso_path or not os.path.isfile(iso_path):
+            return None
+        log.debug("User selected ISO %s" % iso_path)
+        for distro in self.info.distros:
+            if distro.is_valid_iso(iso_path, self.info.check_arch):
+                self.info.iso_path = iso_path
+                self.info.iso_distro = distro
+                self.info.cd_path = None
+                self.info.cd_distro = None
+                log.info("Selected ISO %s matches %s" % (iso_path, distro.name))
+                return distro
+        log.info("Selected ISO %s is not a supported image" % iso_path)
+        return None
+
     def find_any_cd(self):
         log.debug("Searching for local CDs")
         for path in self.get_cd_search_paths():

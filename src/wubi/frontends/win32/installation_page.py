@@ -207,6 +207,13 @@ class InstallationPage(Page):
         self.populate_distro_list()
         self.distro_list.on_change = self.on_distro_change
 
+        # Let the user point Wubi at an ISO they already downloaded.
+        self.browse_iso_button = ui.Button(
+            self.main,
+            h + 32 + 10, h*7 + 44, 150, 24,
+            _("Browse for ISO..."))
+        self.browse_iso_button.on_click = self.on_browse_iso
+
         picture, label, self.language_list = self.add_controls_block(
             self.main, h*4 + w, h,
             "language.bmp", _("Language:"), True)
@@ -295,6 +302,26 @@ class InstallationPage(Page):
         language5 = language4 and language4.split('_')[0]
         translation = gettext.translation(self.info.application_name, localedir=self.info.translations_dir, languages=[language1, language2, language3, language4, language5])
         translation.install(names=[ngettext])
+
+    def on_browse_iso(self):
+        iso_path = self.frontend.select_file(
+            _("Select an Ubuntu installation ISO image"))
+        if not iso_path:
+            return
+        distro = self.application.backend.select_iso(iso_path)
+        if not distro:
+            self.frontend.show_error_message(
+                _("The selected file is not a supported installation image:\n%s")
+                % iso_path)
+            return
+        # Lock the selection to the distro the chosen ISO provides.
+        self.info.distro = distro
+        self.distro_list.clear()
+        self.distro_list.add_item(distro.name)
+        self.distro_list.set_value(distro.name)
+        self.on_distro_change()
+        self.frontend.show_info_message(
+            _("Wubi will install from the selected ISO:\n%s") % iso_path)
 
     def on_drive_change(self):
         self.info.target_drive = self.get_drive()
