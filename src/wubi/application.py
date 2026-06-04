@@ -155,7 +155,12 @@ class Wubi(object):
         self.frontend = self.get_frontend()
         self.frontend.show_installation_settings()
         log.info("Received settings")
-        self.frontend.run_tasks(self.backend.get_installation_tasklist())
+        if getattr(self.info, 'dualboot', False):
+            log.info("Dual-boot mode: booting the live installer instead of a loopfile install")
+            tasklist = self.backend.get_dualboot_tasklist()
+        else:
+            tasklist = self.backend.get_installation_tasklist()
+        self.frontend.run_tasks(tasklist)
         log.info("Almost finished installing")
         if not self.info.non_interactive:
             self.frontend.show_installation_finish_page()
@@ -260,6 +265,7 @@ class Wubi(object):
         parser.add_option("--skipsizecheck", action="store_true", dest="skip_size_check", help="Skip disk size checks")
         parser.add_option("--skipmemorycheck", action="store_true", dest="skip_memory_check", help="Skip memory size checks")
         parser.add_option("--noninteractive", action="store_true", dest="non_interactive", help="Non interactive mode")
+        parser.add_option("--dualboot", action="store_true", dest="dualboot", help="Guided dual-boot: instead of a Wubi loopfile install, reboot into the live Ubuntu installer so you can install alongside Windows on a real partition")
         parser.add_option("--test", action="store_true", dest="test", help="Test mode")
         parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode")
         parser.add_option("--drive", dest="target_drive", help="Target drive")

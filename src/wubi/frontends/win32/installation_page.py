@@ -214,6 +214,14 @@ class InstallationPage(Page):
             _("Browse for ISO..."))
         self.browse_iso_button.on_click = self.on_browse_iso
 
+        # Guided dual-boot: instead of a Wubi loopfile install, reboot into the
+        # live Ubuntu installer to install alongside Windows on a real partition.
+        self.dualboot_check = ui.CheckButton(
+            self.main,
+            h + 32 + 10, h*7 + 44 + 32, 280, 20,
+            _("Install alongside Windows (dual boot, real partition)"))
+        self.dualboot_check.set_check(bool(getattr(self.info, 'dualboot', False)))
+
         picture, label, self.language_list = self.add_controls_block(
             self.main, h*4 + w, h,
             "language.bmp", _("Language:"), True)
@@ -401,5 +409,24 @@ class InstallationPage(Page):
             elif not self.frontend.ask_confirmation(message):
                 log.info("User cancelled installation after BitLocker warning")
                 return
+        # Guided dual-boot: warn about real repartitioning before committing.
+        dualboot = self.dualboot_check.is_checked()
+        if dualboot:
+            message = _(
+                "Dual-boot mode will reboot your computer into the Ubuntu "
+                "installer so you can install Ubuntu on a real partition "
+                "alongside Windows.\n\n"
+                "Unlike the standard Wubi install, this resizes your disk and "
+                "creates new partitions. Repartitioning can result in DATA "
+                "LOSS if interrupted. Back up important files and close other "
+                "programs before continuing.\n\n"
+                "Do you want to continue in dual-boot mode?")
+            if self.info.non_interactive:
+                log.warning(message.replace("\n", " "))
+            elif not self.frontend.ask_confirmation(message):
+                log.info("User cancelled dual-boot installation after repartition warning")
+                return
+        self.info.dualboot = dualboot
+        log.debug("dualboot=%s" % dualboot)
         self.frontend.stop()
 

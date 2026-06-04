@@ -27,6 +27,7 @@ import logging
 import time
 import gettext
 import glob
+import re
 import shutil
 import configparser as ConfigParser
 from . import btdownloader
@@ -138,6 +139,36 @@ class Backend(object):
             Task(self.eject_cd, description=_("Ejecting the CD")),
             ]
         description = _("Installing %(distro)s-%(version)s") % dict(distro=self.info.distro.name, version=self.info.version)
+        tasklist = ThreadedTaskList(description=description, tasks=tasks)
+        return tasklist
+
+    def get_dualboot_tasklist(self):
+        '''
+        Guided dual-boot: rather than installing into a Wubi loopfile, stage the
+        ISO + kernel/initrd and add a boot entry that reboots into the *live*
+        Ubuntu installer (no preseed, no automatic-ubiquity). The user then runs
+        the distribution's guided "Install alongside Windows", letting Ubuntu
+        resize the disk and create a real partition.
+
+        This omits the loopfile-only steps: disk-size selection, the preseed and
+        the virtual-disk creation. modify_grub_configuration() detects dual-boot
+        and writes a live-installer boot menu.
+        '''
+        self.cache_cd_path()
+        tasks = [
+            Task(self.select_target_dir, description=_("Selecting the target directory")),
+            Task(self.create_dir_structure, description=_("Creating the installation directories")),
+            Task(self.uncompress_target_dir, description=_("Uncompressing files")),
+            Task(self.create_uninstaller, description=_("Creating the uninstaller")),
+            Task(self.copy_installation_files, description=_("Copying installation files")),
+            Task(self.get_iso, description=_("Retrieving installation files")),
+            Task(self.extract_kernel, description=_("Extracting the kernel")),
+            Task(self.modify_bootloader, description=_("Adding a new bootloader entry")),
+            Task(self.modify_grub_configuration, description=_("Setting up installation boot menu")),
+            Task(self.uncompress_files, description=_("Uncompressing files")),
+            Task(self.eject_cd, description=_("Ejecting the CD")),
+            ]
+        description = _("Preparing to install %(distro)s-%(version)s alongside Windows") % dict(distro=self.info.distro.name, version=self.info.version)
         tasklist = ThreadedTaskList(description=description, tasks=tasks)
         return tasklist
 
@@ -893,7 +924,13 @@ class Backend(object):
         pass
 
     def modify_grub_configuration(self):
-        if getattr(self.info.distro.provider, 'install_method', None) == 'diskimage-script':
+        dualboot = getattr(self.info, 'dualboot', False)
+        if dualboot:
+            # Dual-boot always boots the stock live session (the diskimage
+            # casper trigger is irrelevant here), so use the legacy template
+            # and strip the preseed/automatic-ubiquity below.
+            template_file = join_path(self.info.data_dir, 'grub.install.cfg')
+        elif getattr(self.info.distro.provider, 'install_method', None) == 'diskimage-script':
             template_file = join_path(self.info.data_dir, 'grub.install.modern.cfg')
         else:
             template_file = join_path(self.info.data_dir, 'grub.install.cfg')
@@ -934,6 +971,13 @@ class Backend(object):
         if self.info.run_task == "cd_boot":
             content = content.replace(" automatic-ubiquity", "")
             content = content.replace(" iso-scan/filename=", "")
+        elif dualboot:
+            # Boot the live session for a guided "Install alongside Windows":
+            # drop the automatic preseeded install and the preseed file, but
+            # keep iso-scan so the live ISO is found and booted from the loopback.
+            content = content.replace(" automatic-ubiquity", "")
+            content = content.replace(" noprompt", "")
+            content = re.sub(r"file=\S*preseed\.cfg\s*", "", content)
         grub_config_file = join_path(self.info.install_boot_dir, "grub", "grub.cfg")
         write_file(grub_config_file, content)
 
