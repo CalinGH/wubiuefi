@@ -265,6 +265,11 @@ class WindowsBackend(Backend):
         full_version = sys.getwindowsversion()
         major, minor, build, platform, txt = full_version
         #platform.platform(), platform.system(), platform.release(), platform.version()
+        # Default to the modern bootmgr/BCD family so an unrecognised (e.g.
+        # future) Windows never leaves 'version' unassigned. Vista, 7, 8, 8.1
+        # (all major 6) and 10/11 (major 10) share the same boot loader, which
+        # get_bootloader() maps from 'vista'.
+        version = 'vista'
         if platform == 0:
             version = 'win32'
         elif platform == 1:
@@ -285,7 +290,7 @@ class WindowsBackend(Backend):
                     version = 'xp'
                 elif minor == 2:
                     version = '2003'
-            elif major == 6:
+            elif major >= 6:
                 version = 'vista'
         log.debug('windows version=%s' % version)
         return version
