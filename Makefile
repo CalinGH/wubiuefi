@@ -11,9 +11,12 @@ all: build check
 
 build: wubi
 
+# One-dir build: PyInstaller writes the app folder to build/dist/wubi (a
+# separate distpath so it doesn't clobber the build/wubi staging tree that
+# wubi.spec consumes). The launcher is build/dist/wubi/wubi.exe.
 wubi: wubi-pre-build
 	tools/pywine -m PyInstaller --noconfirm --clean --log-level=WARN \
-		--distpath build --workpath build/pyinstaller wubi.spec
+		--distpath build/dist --workpath build/pyinstaller wubi.spec
 
 wubizip: wubi-pre-build
 	cp -a wine/drive_c/Python312 build/wubi/python
@@ -125,7 +128,7 @@ grubutil: src/grubutil/grubinst/*
 runbin: wubi
 	rm -rf build/test
 	mkdir build/test
-	cd build/test; ../../tools/wine ../wubi.exe --test
+	cd build/test; ../../tools/wine ../dist/wubi/wubi.exe --test
 
 check_wine: tools/check_wine
 	tools/check_wine

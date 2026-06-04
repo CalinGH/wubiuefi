@@ -4,8 +4,11 @@ This document explains how to build `wubi.exe` from source.
 
 ## How the build works
 
-`wubi.exe` is a Python 3 application frozen into a single Windows executable with
-**PyInstaller**. Because the target is Windows but the supporting boot tooling
+`wubi.exe` is a Python 3 application frozen with **PyInstaller** into a **one-dir
+bundle** (`wubi.exe` next to an `_internal/` folder of DLLs and resources). A
+one-dir bundle is used rather than a single self-extracting exe because the
+latter is a frequent antivirus false-positive trigger. Because the target is
+Windows but the supporting boot tooling
 (GRUB, shim, `sbsign`, `mingw`) is Linux-native, the build is designed to run on
 **Linux** (or **WSL**) and uses **Wine** to host a Windows Python 3.12:
 
@@ -20,8 +23,8 @@ This document explains how to build `wubi.exe` from source.
    `cpuid.dll` with mingw, and `make translations` compiles the `.mo` files.
 4. `wubi-pre-build` stages everything into `build/wubi/` (`lib/` = app code +
    `version.py`; `data/ bin/ winboot/ translations/` = resources).
-5. PyInstaller freezes `build/wubi/lib/main.py` per `wubi.spec` into
-   `build/wubi.exe`.
+5. PyInstaller freezes `build/wubi/lib/main.py` per `wubi.spec` into the one-dir
+   bundle `build/dist/wubi/` (launcher: `build/dist/wubi/wubi.exe`).
 
 ## Prerequisites (Ubuntu/Debian, including WSL)
 
@@ -52,7 +55,8 @@ WINEARCH=win32 WINEDLLOVERRIDES="mscoree=d;mshtml=d" make build
 * `WINEDLLOVERRIDES="mscoree=d;mshtml=d"` — disable Wine's interactive
   Mono/Gecko install prompts (they otherwise block a headless build).
 
-Output: **`build/wubi.exe`**.
+Output: the one-dir bundle **`build/dist/wubi/`** (run **`build/dist/wubi/wubi.exe`**).
+Distribute the whole `wubi/` folder, not just the exe.
 
 Useful follow-ups:
 * `make runbin` — build and launch the frozen exe under Wine.
@@ -96,7 +100,8 @@ If you still want the GUI executable on Windows:
    ```
    Obtain `winboot/`, `bin/cpuid.dll` and `translations/` from a Linux/WSL build
    (or a CI artifact) and copy them in.
-4. `pyinstaller --noconfirm --clean wubi.spec` → `build\wubi.exe`.
+4. `pyinstaller --noconfirm --clean --distpath build\dist wubi.spec` →
+   `build\dist\wubi\wubi.exe`.
 
 This yields a runnable GUI (enough to exercise the UI), but a real install needs
 the Linux-built boot artifacts above.

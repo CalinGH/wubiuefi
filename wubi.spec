@@ -46,18 +46,29 @@ a = Analysis(
 
 pyz = PYZ(a.pure)
 
+# One-dir (COLLECT) build rather than one-file. A self-extracting one-file
+# exe is one of the most common antivirus false-positive triggers (the
+# PyInstaller bootloader unpacking to %TEMP% at launch). A one-dir build ships
+# wubi.exe next to its DLLs/resources and is flagged far less often.
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='wubi',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    runtime_tmpdir=None,
     console=False,
     icon=os.path.join(STAGE, 'data', 'images', 'Wubi.ico'),
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    name='wubi',
 )

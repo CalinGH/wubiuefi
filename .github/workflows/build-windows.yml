@@ -49,13 +49,16 @@ jobs:
 
       - name: Show build output
         if: always()
-        run: ls -la build/ || true
+        run: ls -la build/dist/wubi/ || true
 
-      - name: Upload wubi.exe
+      # One-dir build: upload the whole app folder (wubi.exe + _internal/).
+      # upload-artifact zips it, so the download is a single archive that
+      # extracts to a runnable wubi/ folder.
+      - name: Upload wubi (one-dir app)
         uses: actions/upload-artifact@v4
         with:
-          name: wubi-exe
+          name: wubi-app
           path: |
-            build/wubi.exe
+            build/dist/wubi
           if-no-files-found: error
           retention-days: 14
