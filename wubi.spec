@@ -61,6 +61,10 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,
+    # Wubi edits the Windows boot configuration (bcdedit, BCD/EFI), which
+    # requires elevation. Embed a requireAdministrator manifest so launching
+    # wubi.exe triggers a UAC prompt, matching the original installer.
+    uac_admin=True,
     icon=os.path.join(STAGE, 'data', 'images', 'Wubi.ico'),
 )
 
