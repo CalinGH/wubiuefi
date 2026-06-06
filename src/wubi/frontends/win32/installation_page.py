@@ -28,6 +28,12 @@ import gettext
 
 log = logging.getLogger("WinuiInstallationPage")
 
+# Real-partition modes only stage the ISO + boot files on the chosen Windows
+# drive (the Linux partition is created by the Ubuntu installer elsewhere), so
+# they need far less free space there than the loop-file Wubi mode. This is the
+# margin kept on top of the ISO size for the extracted kernel/initrd and assets.
+REAL_PARTITION_STAGING_HEADROOM_MB = 1500
+
 reserved_usernames = [str(n) for n in reserved_usernames]
 re_username_first = re.compile("^[a-z]")
 re_username = re.compile("[a-z][-a-z0-9_]*$")
@@ -56,7 +62,7 @@ class InstallationPage(Page):
     def check_disk_free_space(self):
         if self.info.skip_size_check:
             return
-        min_space_mb = self.info.distro.min_disk_space_mb + self.info.distro.max_iso_size/(1024**2)+ 100
+        min_space_mb = self.get_min_drive_space_mb()
         max_space_mb = 0
         max_space_mb2 = 0
         for drive in self.info.drives:
@@ -79,8 +85,9 @@ class InstallationPage(Page):
                 self.info.skip_size_check = True
 
     def populate_drive_list(self):
+        self._drive_list_mode = self._get_install_mode()
         self.check_disk_free_space()
-        min_space_mb = self.info.distro.min_disk_space_mb + self.info.distro.max_iso_size/(1024**2)+ 100
+        min_space_mb = self.get_min_drive_space_mb()
         self.drives_gb = []
         self.target_drive_list.clear()
         for drive in self.info.drives:
@@ -137,6 +144,8 @@ class InstallationPage(Page):
                 if i >= installation_size_gb:
                     self.size_list.set_value("%sGB" % i)
                     return
+        if not self.size_list_gb:
+            return
         i = int(len(self.size_list_gb)/2)
         installation_size_gb = self.size_list_gb[i]
         self.size_list.set_value("%sGB" % installation_size_gb)
@@ -404,6 +413,11 @@ class InstallationPage(Page):
             self.size_picture.hide()
             self.size_label_widget.hide()
             self.size_list.hide()
+        # Real-partition modes need much less space on the staging drive than
+        # Wubi mode; refresh the drive picker when that requirement changes.
+        if hasattr(self, 'target_drive_list') \
+        and getattr(self, '_drive_list_mode', None) != self._get_install_mode():
+            self.populate_drive_list()
 
     def on_drive_change(self):
         self.info.target_drive = self.get_drive()
@@ -419,11 +433,29 @@ class InstallationPage(Page):
         self.frontend.show_page(self.frontend.accessibility_page)
 
     def _get_install_mode(self):
+        # The mode radios are created partway through on_init; before that the
+        # effective mode is the loop-file default.
+        if not hasattr(self, 'mode_autoinstall'):
+            return 'wubi'
         if self.mode_autoinstall.is_checked():
             return 'autoinstall'
         if self.mode_guided.is_checked():
             return 'guided'
         return 'wubi'
+
+    def get_min_drive_space_mb(self):
+        '''
+        Free space (MB) a Windows drive must have to host the selected install.
+
+        Wubi loop-file mode needs room for the virtual disk *and* the ISO. The
+        real-partition modes only stage the ISO + boot files here, so they need
+        roughly the ISO size plus a small margin.
+        '''
+        distro = self.info.distro
+        iso_mb = distro.max_iso_size / (1024 ** 2)
+        if self._get_install_mode() in ('autoinstall', 'guided'):
+            return iso_mb + REAL_PARTITION_STAGING_HEADROOM_MB
+        return distro.min_disk_space_mb + iso_mb + 100
 
     def check_real_partition_preconditions(self):
         '''
