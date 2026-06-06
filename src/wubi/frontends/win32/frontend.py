@@ -77,7 +77,7 @@ class WindowsFrontend(ui.Frontend):
 
     def on_init(self):
         log.debug("on_init...")
-        self.main_window.resize(504,385)
+        self.main_window.resize(504, 430)
 
     def show_page(self, page):
         if self.current_page is page:

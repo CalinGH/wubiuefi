@@ -93,18 +93,44 @@ entry in `data/isolist.ini` via `provider=`:
   the system and a loop-boot initramfs, and writes the boot config that the
   existing `wubildr` chain loads. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Installation types
+
+The installation page offers three installation types (selectable in the GUI, or
+non-interactively with `--install-mode`):
+
+* **Wubi — Ubuntu inside Windows** (`--install-mode=wubi`, the default). The
+  classic Wubi experience: Ubuntu lives in a loopback file (`root.disk`) on an
+  existing Windows (NTFS) partition. No repartitioning, and it can be removed
+  cleanly from Windows. This is the only mode that uses the **Installation size**
+  selector.
+* **Install alongside Windows — automated** (`--install-mode=autoinstall`). A
+  real-partition dual boot with **no manual steps in the Ubuntu installer**. Wubi
+  stages the ISO and a [subiquity autoinstall](https://canonical-subiquity.readthedocs-hosted.com/en/latest/reference/autoinstall-reference.html)
+  configuration (`user-data`/`meta-data`) and reboots into the live session,
+  which automatically resizes the largest Windows partition (`storage.layout.name:
+  alongside`) and installs Ubuntu on its own partition.
+* **Launch Ubuntu installer manually — guided** (`--install-mode=guided`, alias
+  `--dualboot`). Wubi prepares the boot environment and reboots into the stock
+  Ubuntu live installer so you can partition the disk yourself.
+
+> **Real partitioning can cause data loss if interrupted.** The two
+> real-partition modes show a confirmation warning; back up before using them.
+
 ## What Wubi does
 
 * Gathers host system info and checks the minimum installation requirements.
-* Collects user choices through the GUI (you can **browse for a local ISO**).
+* Collects user choices through the GUI (you can **browse for a local ISO** and
+  pick the **installation type**, see above).
 * Detects **BitLocker** on the target/system drive and warns before changing the
   boot configuration.
 * Finds a local ISO/CD or downloads one over HTTP (BitTorrent is opt-in via
   `--bittorrent`); verifies checksums and the GPG signature.
 * Adds a boot entry to the Windows boot configuration (BCD/EFI), with **Secure
   Boot** support via a signed shim + GRUB.
-* Allocates the virtual disk and prepares the install; the actual installation
-  completes after rebooting into Linux.
+* For a Wubi install, allocates the virtual disk and prepares the install; the
+  actual installation completes after rebooting into Linux. For the
+  real-partition modes, stages the ISO (plus an autoinstall config in automated
+  mode) and hands off to the Ubuntu installer after reboot.
 
 ## Customization
 

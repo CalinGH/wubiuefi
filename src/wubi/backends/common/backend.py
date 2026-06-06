@@ -38,12 +38,63 @@ from .metalink import parse_metalink
 from .tasklist import ThreadedTaskList, Task
 from .distro import Distro
 from .mappings import lang_country2linux_locale
-from .utils import join_path, run_nonblocking_command, md5_password, copy_file, read_file, write_file, get_file_hash, reversed, find_line_in_file, unix_path, rm_tree, spawn_command
+from .utils import join_path, run_nonblocking_command, md5_password, sha512_crypt, copy_file, read_file, write_file, get_file_hash, reversed, find_line_in_file, unix_path, rm_tree, spawn_command
 from .signature import verify_gpg_signature
 from wubi import errors
 from os.path import abspath
 
 log = logging.getLogger("CommonBackend")
+
+# Severities returned by check_real_partition_preconditions().
+SEVERITY_ERROR = 'error'      # blocks the install outright
+SEVERITY_WARNING = 'warning'  # needs explicit user confirmation
+
+# Extra free space (MB) to require on the partition that will be shrunk, on top
+# of the distro's stated minimum, so the resized Windows volume keeps headroom.
+REAL_PARTITION_HEADROOM_MB = 5120
+
+
+def check_real_partition_preconditions(install_mode, resize_free_mb,
+                                       required_free_mb, fast_startup_enabled,
+                                       bitlocker_drives=None, volume_dirty=False):
+    '''
+    Evaluate the safety preconditions for the real-partition install modes
+    ('autoinstall' and 'guided').
+
+    This is a pure function over primitive inputs (no Windows calls) so it can be
+    unit tested. It returns an ordered list of ``(severity, code, context)``
+    findings; the frontend renders them into localized messages. ``error``
+    findings should block the install, ``warning`` findings should be confirmed.
+
+    For modes other than the real-partition ones an empty list is returned, so it
+    is always safe to call.
+    '''
+    findings = []
+    if install_mode not in ('autoinstall', 'guided'):
+        return findings
+    try:
+        resize_free_mb = float(resize_free_mb)
+    except (TypeError, ValueError):
+        resize_free_mb = 0.0
+    try:
+        required_free_mb = float(required_free_mb)
+    except (TypeError, ValueError):
+        required_free_mb = 0.0
+    if resize_free_mb < required_free_mb:
+        findings.append((SEVERITY_ERROR, 'insufficient_space', {
+            'free_mb': int(resize_free_mb),
+            'required_mb': int(required_free_mb),
+        }))
+    if volume_dirty:
+        findings.append((SEVERITY_WARNING, 'volume_dirty', {}))
+    if fast_startup_enabled:
+        findings.append((SEVERITY_WARNING, 'fast_startup', {}))
+    if bitlocker_drives:
+        findings.append((SEVERITY_WARNING, 'bitlocker', {
+            'drives': sorted(bitlocker_drives),
+        }))
+    return findings
+
 
 class Backend(object):
     '''
@@ -171,6 +222,129 @@ class Backend(object):
         description = _("Preparing to install %(distro)s-%(version)s alongside Windows") % dict(distro=self.info.distro.name, version=self.info.version)
         tasklist = ThreadedTaskList(description=description, tasks=tasks)
         return tasklist
+
+    def get_autoinstall_tasklist(self):
+        '''
+        Automated real-partition install alongside Windows.
+
+        Stages the ISO, kernel and initrd exactly like the guided dual-boot path,
+        then also writes a subiquity autoinstall.yaml (``user-data`` + empty
+        ``meta-data``) into the staging directory so the live session can pick it
+        up via the ``ds=nocloud`` cloud-init datasource.  The resulting GRUB menu
+        boots the live ISO with ``autoinstall ds=nocloud;s=<path>`` on the kernel
+        cmdline, which makes subiquity run unattended and install Ubuntu alongside
+        Windows on a real partition using the ``alongside`` storage layout.
+
+        Virtual disk creation, preseed files and the modern initrd hook are all
+        omitted; the Ubuntu installer handles partitioning and formatting itself.
+        '''
+        self.cache_cd_path()
+        tasks = [
+            Task(self.select_target_dir, description=_("Selecting the target directory")),
+            Task(self.create_dir_structure, description=_("Creating the installation directories")),
+            Task(self.uncompress_target_dir, description=_("Uncompressing files")),
+            Task(self.create_uninstaller, description=_("Creating the uninstaller")),
+            Task(self.copy_installation_files, description=_("Copying installation files")),
+            Task(self.get_iso, description=_("Retrieving installation files")),
+            Task(self.extract_kernel, description=_("Extracting the kernel")),
+            Task(self.create_autoinstall_config, description=_("Creating the autoinstall configuration")),
+            Task(self.modify_bootloader, description=_("Adding a new bootloader entry")),
+            Task(self.modify_grub_configuration, description=_("Setting up installation boot menu")),
+            Task(self.uncompress_files, description=_("Uncompressing files")),
+            Task(self.eject_cd, description=_("Ejecting the CD")),
+        ]
+        description = _("Preparing to install %(distro)s-%(version)s alongside Windows") % dict(distro=self.info.distro.name, version=self.info.version)
+        tasklist = ThreadedTaskList(description=description, tasks=tasks)
+        return tasklist
+
+    def create_autoinstall_config(self, associated_task=None):
+        '''
+        Write a subiquity autoinstall ``user-data`` file (and empty ``meta-data``)
+        into ``<target>/install/autoinstall/`` so the live session can discover
+        them through the ``ds=nocloud;s=/isodevice/<path>/autoinstall/`` cloud-init
+        source URI passed on the kernel command line.
+
+        The ``storage.layout.name: alongside`` directive tells subiquity to
+        automatically resize the largest Windows (NTFS) partition and create the
+        required Linux partitions in the freed space, with no manual interaction.
+        '''
+        autoinstall_dir = join_path(self.info.install_dir, 'autoinstall')
+        if not os.path.isdir(autoinstall_dir):
+            os.makedirs(autoinstall_dir)
+
+        # subiquity's identity.password expects a SHA-512 ($6$) crypted password.
+        hashed_password = sha512_crypt(self.info.password or '')
+
+        # Keyboard: subiquity uses layout/variant directly.
+        keyboard_layout = getattr(self.info, 'keyboard_layout', 'us') or 'us'
+        keyboard_variant = getattr(self.info, 'keyboard_variant', '') or ''
+
+        # Locale: strip encoding suffix (e.g. "en_US.UTF-8" → "en_US").
+        locale = (getattr(self.info, 'locale', '') or 'en_US').split('.')[0]
+
+        username = self.info.username or 'ubuntu'
+        hostname = username + '-desktop'
+
+        user_data = (
+            "#cloud-config\n"
+            "autoinstall:\n"
+            "  version: 1\n"
+            "  locale: {locale}\n"
+            "  keyboard:\n"
+            "    layout: {keyboard_layout}\n"
+            "    variant: {keyboard_variant}\n"
+            "  identity:\n"
+            "    hostname: {hostname}\n"
+            "    username: {username}\n"
+            "    password: '{hashed_password}'\n"
+            "  storage:\n"
+            "    layout:\n"
+            "      name: alongside\n"
+            "  ssh:\n"
+            "    install-server: false\n"
+            "  updates: security\n"
+            "  shutdown: reboot\n"
+        ).format(
+            locale=locale,
+            keyboard_layout=keyboard_layout,
+            keyboard_variant=keyboard_variant,
+            hostname=hostname,
+            username=username,
+            hashed_password=hashed_password,
+        )
+
+        write_file(join_path(autoinstall_dir, 'user-data'), user_data)
+        write_file(join_path(autoinstall_dir, 'meta-data'), '')
+        self.info.autoinstall_dir = autoinstall_dir
+        log.debug("Autoinstall config written to %s" % autoinstall_dir)
+
+    def get_real_partition_findings(self):
+        '''
+        Gather the safety preconditions for the selected real-partition install
+        mode from ``self.info`` and return the findings list (see
+        ``check_real_partition_preconditions``). Returns an empty list for the
+        loop-file Wubi mode.
+        '''
+        install_mode = getattr(self.info, 'install_mode', 'wubi') or 'wubi'
+        # subiquity's "alongside" layout shrinks the largest partition, which in
+        # practice is the Windows system drive; require headroom there. Fall back
+        # to the staging target drive when the system drive is unknown.
+        resize_drive = getattr(self.info, 'system_drive', None) or getattr(self.info, 'target_drive', None)
+        resize_free_mb = getattr(resize_drive, 'free_space_mb', 0) or 0
+        distro = getattr(self.info, 'distro', None)
+        min_disk_space_mb = getattr(distro, 'min_disk_space_mb', 0) or 0
+        required_free_mb = min_disk_space_mb + REAL_PARTITION_HEADROOM_MB
+        # BitLocker is intentionally not passed here: the frontend already shows
+        # a dedicated BitLocker warning for every install mode, so re-emitting it
+        # as a finding would double up the dialog.
+        return check_real_partition_preconditions(
+            install_mode,
+            resize_free_mb,
+            required_free_mb,
+            getattr(self.info, 'fast_startup_enabled', False),
+            bitlocker_drives=None,
+            volume_dirty=getattr(self.info, 'volume_dirty', False),
+        )
 
     def get_cdboot_tasklist(self):
         self.cache_cd_path()
@@ -924,11 +1098,12 @@ class Backend(object):
         pass
 
     def modify_grub_configuration(self):
-        dualboot = getattr(self.info, 'dualboot', False)
-        if dualboot:
-            # Dual-boot always boots the stock live session (the diskimage
-            # casper trigger is irrelevant here), so use the legacy template
-            # and strip the preseed/automatic-ubiquity below.
+        install_mode = getattr(self.info, 'install_mode', None) or (
+            'guided' if getattr(self.info, 'dualboot', False) else 'wubi')
+        if install_mode == 'autoinstall':
+            template_file = join_path(self.info.data_dir, 'grub.autoinstall.cfg')
+        elif install_mode == 'guided':
+            # Boot the stock live session; preseed/automatic-ubiquity stripped below.
             template_file = join_path(self.info.data_dir, 'grub.install.cfg')
         elif getattr(self.info.distro.provider, 'install_method', None) == 'diskimage-script':
             template_file = join_path(self.info.data_dir, 'grub.install.modern.cfg')
@@ -943,8 +1118,11 @@ class Backend(object):
         elif self.info.iso_path:
             isopath = unix_path(self.info.iso_path)
         rootflags = "rootflags=sync"
+        autoinstall_dir_unix = unix_path(
+            getattr(self.info, 'autoinstall_dir', '')) if install_mode == 'autoinstall' else ''
         dic = dict(
             custom_installation_dir = unix_path(self.info.custominstall),
+            autoinstall_dir = autoinstall_dir_unix,
             iso_path = isopath,
             keyboard_variant = self.info.keyboard_variant,
             keyboard_layout = self.info.keyboard_layout,
@@ -971,7 +1149,7 @@ class Backend(object):
         if self.info.run_task == "cd_boot":
             content = content.replace(" automatic-ubiquity", "")
             content = content.replace(" iso-scan/filename=", "")
-        elif dualboot:
+        elif install_mode == 'guided':
             # Boot the live session for a guided "Install alongside Windows":
             # drop the automatic preseeded install and the preseed file, but
             # keep iso-scan so the live ISO is found and booted from the loopback.

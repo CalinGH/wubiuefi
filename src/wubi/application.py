@@ -155,8 +155,12 @@ class Wubi(object):
         self.frontend = self.get_frontend()
         self.frontend.show_installation_settings()
         log.info("Received settings")
-        if getattr(self.info, 'dualboot', False):
-            log.info("Dual-boot mode: booting the live installer instead of a loopfile install")
+        install_mode = getattr(self.info, 'install_mode', 'wubi') or 'wubi'
+        if install_mode == 'autoinstall':
+            log.info("Autoinstall mode: staging ISO and subiquity autoinstall config")
+            tasklist = self.backend.get_autoinstall_tasklist()
+        elif install_mode == 'guided':
+            log.info("Guided mode: booting the live installer for manual partitioning")
             tasklist = self.backend.get_dualboot_tasklist()
         else:
             tasklist = self.backend.get_installation_tasklist()
@@ -265,7 +269,10 @@ class Wubi(object):
         parser.add_option("--skipsizecheck", action="store_true", dest="skip_size_check", help="Skip disk size checks")
         parser.add_option("--skipmemorycheck", action="store_true", dest="skip_memory_check", help="Skip memory size checks")
         parser.add_option("--noninteractive", action="store_true", dest="non_interactive", help="Non interactive mode")
-        parser.add_option("--dualboot", action="store_true", dest="dualboot", help="Guided dual-boot: instead of a Wubi loopfile install, reboot into the live Ubuntu installer so you can install alongside Windows on a real partition")
+        parser.add_option("--install-mode", dest="install_mode", default=None,
+                          help="Installation mode: 'wubi' (loop-file, default), 'autoinstall' (real partition, automated via subiquity), or 'guided' (real partition, manual Ubuntu installer)")
+        parser.add_option("--dualboot", action="store_true", dest="dualboot", default=False,
+                          help="Alias for --install-mode=guided (kept for compatibility)")
         parser.add_option("--test", action="store_true", dest="test", help="Test mode")
         parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode")
         parser.add_option("--drive", dest="target_drive", help="Target drive")
@@ -285,6 +292,8 @@ class Wubi(object):
         parser.add_option("--interface", dest="use_frontend", default=None, help="use the specified user interface, ['win32']")
         (options, self.args) = parser.parse_args()
         self.info.__dict__.update(options.__dict__)
+        if getattr(self.info, 'dualboot', False) and not self.info.install_mode:
+            self.info.install_mode = 'guided'
         if self.info.test:
             self.info.debug = True
         if self.info.debug:

@@ -34,6 +34,24 @@ The Windows side never installs Linux directly. It:
 At normal boot afterwards, `data/wubildr*.cfg` loop-mounts `root.disk` and boots
 the installed system (`loop=/…/root.disk root=UUID=<host>`).
 
+## Installation modes
+
+The description above is the **Wubi** (loop-file) mode. `info.install_mode`
+(set by the installation page, or `--install-mode`) selects one of three modes,
+each dispatched to a different tasklist in `application.run_installer()`:
+
+| `install_mode` | Tasklist | Boot template | Outcome |
+|----------------|----------|---------------|---------|
+| `wubi` (default) | `get_installation_tasklist()` | `grub.install*.cfg` | Loop-file install into `root.disk` (per-provider, see below). |
+| `autoinstall` | `get_autoinstall_tasklist()` | `grub.autoinstall.cfg` | Real partition, **unattended**: stages a subiquity autoinstall `user-data`/`meta-data` (`create_autoinstall_config()`) and boots the live session with `autoinstall ds=nocloud;s=file:///isodevice/<dir>/`. `storage.layout.name: alongside` auto-resizes Windows and installs Ubuntu on a new partition. |
+| `guided` (alias `--dualboot`) | `get_dualboot_tasklist()` | `grub.install.cfg` (preseed/`automatic-ubiquity` stripped) | Real partition, **manual**: boots the stock Ubuntu live installer for the user to partition. |
+
+The two real-partition modes skip the loop-file-only steps (disk-size selection,
+preseed, virtual-disk creation) and hand off to the Ubuntu installer after
+reboot. The password for autoinstall is hashed with a pure-Python SHA-512 crypt
+(`utils.sha512_crypt`), since the stdlib `crypt` module is Unix-only and absent
+from the Windows build.
+
 ## Distro providers
 
 `backends/common/providers.py` is the extension point that decouples

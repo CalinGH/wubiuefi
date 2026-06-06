@@ -95,6 +95,121 @@ def run_nonblocking_command(command, show_window=False):
     process = spawn_command(command, show_window)
     return process.pid
 
+_SHA512_CRYPT_B64 = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+
+
+def _sha512_b64_from_24bit(b2, b1, b0, n):
+    w = (b2 << 16) | (b1 << 8) | b0
+    out = ''
+    for _ in range(n):
+        out += _SHA512_CRYPT_B64[w & 0x3f]
+        w >>= 6
+    return out
+
+
+def sha512_crypt(password, salt=None, rounds=5000):
+    '''
+    Pure-Python implementation of the glibc SHA-512 crypt ("$6$") scheme.
+
+    The stdlib ``crypt`` module is Unix-only (and was removed entirely in
+    Python 3.13), so it cannot be used in the Windows-frozen build. subiquity's
+    autoinstall ``identity.password`` field expects a $6$ crypted password, so
+    we compute it ourselves. Verified against Ulrich Drepper's published test
+    vectors.
+    '''
+    if isinstance(password, str):
+        password = password.encode('utf-8')
+    if salt is None:
+        salt_chars = './abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        salt = ''.join(random.choice(salt_chars) for _ in range(16)).encode('ascii')
+    if isinstance(salt, str):
+        salt = salt.encode('ascii')
+    salt = salt[:16]
+    plen = len(password)
+    slen = len(salt)
+
+    ctx = hashlib.sha512()
+    ctx.update(password)
+    ctx.update(salt)
+
+    alt = hashlib.sha512()
+    alt.update(password)
+    alt.update(salt)
+    alt.update(password)
+    B = alt.digest()
+
+    i = plen
+    while i > 64:
+        ctx.update(B)
+        i -= 64
+    ctx.update(B[:i])
+
+    i = plen
+    while i > 0:
+        if i & 1:
+            ctx.update(B)
+        else:
+            ctx.update(password)
+        i >>= 1
+    A = ctx.digest()
+
+    dp = hashlib.sha512()
+    for _ in range(plen):
+        dp.update(password)
+    DP = dp.digest()
+    P = b''
+    i = plen
+    while i > 64:
+        P += DP
+        i -= 64
+    P += DP[:i]
+
+    ds = hashlib.sha512()
+    for _ in range(16 + A[0]):
+        ds.update(salt)
+    DS = ds.digest()
+    S = b''
+    i = slen
+    while i > 64:
+        S += DS
+        i -= 64
+    S += DS[:i]
+
+    C = A
+    for r in range(rounds):
+        c = hashlib.sha512()
+        if r & 1:
+            c.update(P)
+        else:
+            c.update(C)
+        if r % 3:
+            c.update(S)
+        if r % 7:
+            c.update(P)
+        if r & 1:
+            c.update(C)
+        else:
+            c.update(P)
+        C = c.digest()
+
+    order = [
+        (0, 21, 42), (22, 43, 1), (44, 2, 23), (3, 24, 45), (25, 46, 4),
+        (47, 5, 26), (6, 27, 48), (28, 49, 7), (50, 8, 29), (9, 30, 51),
+        (31, 52, 10), (53, 11, 32), (12, 33, 54), (34, 55, 13), (56, 14, 35),
+        (15, 36, 57), (37, 58, 16), (59, 17, 38), (18, 39, 60), (40, 61, 19),
+        (62, 20, 41),
+    ]
+    out = ''
+    for b2, b1, b0 in order:
+        out += _sha512_b64_from_24bit(C[b2], C[b1], C[b0], 4)
+    out += _sha512_b64_from_24bit(0, 0, C[63], 2)
+
+    salt_str = salt.decode('ascii')
+    if rounds == 5000:
+        return '$6$%s$%s' % (salt_str, out)
+    return '$6$rounds=%d$%s$%s' % (rounds, salt_str, out)
+
+
 def md5_password(password):
     # From http://mail.python.org/pipermail/python-list/2003-March/195202.html
     if isinstance(password, str):

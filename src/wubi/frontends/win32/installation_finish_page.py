@@ -40,9 +40,23 @@ class InstallationFinishPage(Page):
         self.main.set_background_color(255,255,255)
         self.main.title = ui.Label(self.main, 40, 20, self.main.width - 80, 60, _("Completing the %s Setup Wizard") % self.info.distro.name)
         self.main.title.set_font(size=20, bold=True, family="Arial")
-        self.main.label = ui.Label(self.main, 40, 90, self.main.width - 80, 40, _("You need to reboot to complete the installation"))
-        self.main.reboot_now = ui.RadioButton(self.main, 60, 150, self.main.width - 100, 20, _("Reboot now"))
-        self.main.reboot_later = ui.RadioButton(self.main, 60, 180, self.main.width - 100, 20, _("I want to manually reboot later"))
+        install_mode = getattr(self.info, 'install_mode', 'wubi') or 'wubi'
+        if install_mode == 'autoinstall':
+            label_text = _(
+                "Wubi has staged the Ubuntu installer. When you reboot, Ubuntu "
+                "will automatically install itself alongside Windows on a real "
+                "partition. The process takes 10\u201320 minutes and your computer "
+                "will restart again when it is complete.")
+        elif install_mode == 'guided':
+            label_text = _(
+                "Wubi has prepared the boot environment. When you reboot, the "
+                "Ubuntu live installer will start. Follow the on-screen steps to "
+                "install Ubuntu alongside Windows on a real partition.")
+        else:
+            label_text = _("You need to reboot to complete the installation")
+        self.main.label = ui.Label(self.main, 40, 90, self.main.width - 80, 60, label_text)
+        self.main.reboot_now = ui.RadioButton(self.main, 60, 160, self.main.width - 100, 20, _("Reboot now"))
+        self.main.reboot_later = ui.RadioButton(self.main, 60, 185, self.main.width - 100, 20, _("I want to manually reboot later"))
         self.main.reboot_later.set_check(True)
 
     def on_finish(self):

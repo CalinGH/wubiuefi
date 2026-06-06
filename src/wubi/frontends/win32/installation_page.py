@@ -195,7 +195,7 @@ class InstallationPage(Page):
         # populated by on_distro_change
         self.target_drive_list.on_change = self.on_drive_change
 
-        picture, label, self.size_list = self.add_controls_block(
+        self.size_picture, self.size_label_widget, self.size_list = self.add_controls_block(
                 self.main, h, h*4,
                 "disksize.bmp", _("Installation size:"), True)
         # populated by on_drive_change
@@ -214,13 +214,37 @@ class InstallationPage(Page):
             _("Browse for ISO..."))
         self.browse_iso_button.on_click = self.on_browse_iso
 
-        # Guided dual-boot: instead of a Wubi loopfile install, reboot into the
-        # live Ubuntu installer to install alongside Windows on a real partition.
-        self.dualboot_check = ui.CheckButton(
+        # Installation mode selector: Wubi loop-file, automated real-partition
+        # (subiquity autoinstall), or guided (live installer launched manually).
+        mode_top = h*7 + 44 + 32
+        ui.Label(
             self.main,
-            h + 32 + 10, h*7 + 44 + 32, 280, 20,
-            _("Install alongside Windows (dual boot, real partition)"))
-        self.dualboot_check.set_check(bool(getattr(self.info, 'dualboot', False)))
+            h + 32 + 10, mode_top, 280, 12,
+            _("Installation type:"))
+        self.mode_wubi = ui.RadioButton(
+            self.main,
+            h + 32 + 10, mode_top + 14, 310, 18,
+            _("Wubi — Ubuntu inside Windows (no repartitioning, easy to remove)"))
+        self.mode_autoinstall = ui.RadioButton(
+            self.main,
+            h + 32 + 10, mode_top + 33, 310, 18,
+            _("Install alongside Windows — real partition (automated, uses Ubuntu installer)"))
+        self.mode_guided = ui.RadioButton(
+            self.main,
+            h + 32 + 10, mode_top + 52, 310, 18,
+            _("Launch Ubuntu installer manually — real partition (guided)"))
+        self.mode_wubi.on_click = self.on_mode_change
+        self.mode_autoinstall.on_click = self.on_mode_change
+        self.mode_guided.on_click = self.on_mode_change
+
+        current_mode = getattr(self.info, 'install_mode', 'wubi') or 'wubi'
+        if current_mode == 'autoinstall':
+            self.mode_autoinstall.set_check(True)
+        elif current_mode == 'guided':
+            self.mode_guided.set_check(True)
+        else:
+            self.mode_wubi.set_check(True)
+        self.on_mode_change()
 
         picture, label, self.language_list = self.add_controls_block(
             self.main, h*4 + w, h,
@@ -331,6 +355,18 @@ class InstallationPage(Page):
         self.frontend.show_info_message(
             _("Wubi will install from the selected ISO:\n%s") % iso_path)
 
+    def on_mode_change(self, *_):
+        '''Show/hide size picker depending on whether Wubi loop-file mode is selected.'''
+        wubi = self.mode_wubi.is_checked()
+        if wubi:
+            self.size_picture.show()
+            self.size_label_widget.show()
+            self.size_list.show()
+        else:
+            self.size_picture.hide()
+            self.size_label_widget.hide()
+            self.size_list.hide()
+
     def on_drive_change(self):
         self.info.target_drive = self.get_drive()
         self.populate_size_list()
@@ -344,9 +380,86 @@ class InstallationPage(Page):
     def on_accessibility(self):
         self.frontend.show_page(self.frontend.accessibility_page)
 
+    def _get_install_mode(self):
+        if self.mode_autoinstall.is_checked():
+            return 'autoinstall'
+        if self.mode_guided.is_checked():
+            return 'guided'
+        return 'wubi'
+
+    def check_real_partition_preconditions(self):
+        '''
+        Run the Windows-side pre-flight safety checks for the real-partition
+        install modes. Show a blocking error for ``error`` findings and ask for
+        confirmation on ``warning`` findings. Return True when it is safe to
+        proceed, False when the install should be aborted.
+        '''
+        try:
+            findings = self.application.backend.get_real_partition_findings()
+        except Exception as err:
+            log.exception("Could not evaluate real-partition preconditions: %s" % err)
+            return True
+        for severity, code, ctx in findings:
+            if code == 'insufficient_space':
+                free_gb = ctx.get('free_mb', 0) / 1024.0
+                required_gb = ctx.get('required_mb', 0) / 1024.0
+                message = _(
+                    "Not enough free space to install Ubuntu on a real "
+                    "partition alongside Windows.\n\n"
+                    "About %(required).1fGB of free space is needed on your "
+                    "Windows drive, but only %(free).1fGB is free.\n\n"
+                    "Free up space in Windows (empty the Recycle Bin, remove "
+                    "unused programs, run Disk Cleanup) and try again.") % dict(
+                        required=required_gb, free=free_gb)
+            elif code == 'volume_dirty':
+                message = _(
+                    "Your Windows drive is marked \"dirty\" and needs to be "
+                    "checked before it can be safely resized.\n\n"
+                    "Open an elevated command prompt and run 'chkdsk /F', then "
+                    "reboot Windows once, before installing on a real "
+                    "partition.\n\nDo you want to continue anyway?")
+            elif code == 'fast_startup':
+                message = _(
+                    "Windows Fast Startup (hybrid shutdown) is enabled. This "
+                    "leaves the Windows partition in a locked state that can "
+                    "prevent resizing and risk data loss during a real-partition "
+                    "install.\n\n"
+                    "Disable it in Control Panel > Power Options > 'Choose what "
+                    "the power buttons do' > uncheck 'Turn on fast startup', "
+                    "then fully shut down Windows once.\n\n"
+                    "Do you want to continue anyway?")
+            elif code == 'bitlocker':
+                message = _(
+                    "BitLocker is enabled on: %s.\n\nResizing a BitLocker "
+                    "protected drive can trigger a recovery prompt or data loss. "
+                    "Suspend or disable BitLocker first.\n\n"
+                    "Do you want to continue anyway?") % ", ".join(ctx.get('drives', []))
+            else:
+                message = _("A pre-installation check (%s) did not pass. "
+                            "Do you want to continue anyway?") % code
+
+            if severity == 'error':
+                log.error("Real-partition precondition failed: %s %s" % (code, ctx))
+                if self.info.non_interactive:
+                    self.frontend.quit()
+                else:
+                    self.frontend.show_error_message(message)
+                return False
+            else:
+                if self.info.non_interactive:
+                    log.warning("Real-partition warning (%s): %s" % (code, message.replace("\n", " ")))
+                elif not self.frontend.ask_confirmation(message):
+                    log.info("User cancelled after real-partition warning: %s" % code)
+                    return False
+        return True
+
     def on_install(self):
         drive = self.get_drive()
-        installation_size_mb = self.get_installation_size_mb()
+        install_mode = self._get_install_mode()
+        if install_mode == 'wubi':
+            installation_size_mb = self.get_installation_size_mb()
+        else:
+            installation_size_mb = 0
         language = self.language_list.get_text()
         language = language2lang_country.get(language, None)
         locale = lang_country2linux_locale.get(language, self.info.locale)
@@ -379,17 +492,15 @@ class InstallationPage(Page):
                 self.frontend.quit()
             return
         log.debug(
-            "target_drive=%s, installation_size=%sMB, distro_name=%s, language=%s, locale=%s, username=%s" \
-            % (drive.path, installation_size_mb, self.info.distro.name, language, locale, username))
+            "install_mode=%s, target_drive=%s, installation_size=%sMB, distro_name=%s, language=%s, locale=%s, username=%s" \
+            % (install_mode, drive.path, installation_size_mb, self.info.distro.name, language, locale, username))
         self.info.target_drive = drive
         self.info.installation_size_mb = installation_size_mb
         self.info.language = language
         self.info.locale = locale
         self.info.username = username
         self.info.password = password1
-        # Warn if BitLocker protection is on for the target or system drive:
-        # changing the Windows boot configuration (and, on EFI, the EFI System
-        # Partition) can trigger a BitLocker recovery prompt on the next boot.
+        # Warn if BitLocker protection is on for the target or system drive.
         bitlocker = getattr(self.info, 'bitlocker_drives', None) or set()
         affected = []
         for d in (drive, self.info.system_drive):
@@ -409,24 +520,35 @@ class InstallationPage(Page):
             elif not self.frontend.ask_confirmation(message):
                 log.info("User cancelled installation after BitLocker warning")
                 return
-        # Guided dual-boot: warn about real repartitioning before committing.
-        dualboot = self.dualboot_check.is_checked()
-        if dualboot:
-            message = _(
-                "Dual-boot mode will reboot your computer into the Ubuntu "
-                "installer so you can install Ubuntu on a real partition "
-                "alongside Windows.\n\n"
-                "Unlike the standard Wubi install, this resizes your disk and "
-                "creates new partitions. Repartitioning can result in DATA "
-                "LOSS if interrupted. Back up important files and close other "
-                "programs before continuing.\n\n"
-                "Do you want to continue in dual-boot mode?")
+        # Real-partition modes: run Windows-side pre-flight safety checks.
+        # Errors block the install; warnings require confirmation.
+        if install_mode in ('autoinstall', 'guided'):
+            self.info.install_mode = install_mode
+            if not self.check_real_partition_preconditions():
+                return
+        # Real-partition modes repartition the disk — warn before committing.
+        if install_mode in ('autoinstall', 'guided'):
+            if install_mode == 'autoinstall':
+                mode_desc = _(
+                    "Automated install alongside Windows will reboot your "
+                    "computer into the Ubuntu installer which will automatically "
+                    "resize your Windows partition and install Ubuntu on a real "
+                    "partition.\n\n")
+            else:
+                mode_desc = _(
+                    "Guided dual-boot mode will reboot your computer into the "
+                    "Ubuntu live installer so you can partition the disk and "
+                    "install Ubuntu on a real partition alongside Windows.\n\n")
+            message = mode_desc + _(
+                "Repartitioning can result in DATA LOSS if interrupted. "
+                "Back up important files and close other programs before "
+                "continuing.\n\nDo you want to continue?")
             if self.info.non_interactive:
                 log.warning(message.replace("\n", " "))
             elif not self.frontend.ask_confirmation(message):
-                log.info("User cancelled dual-boot installation after repartition warning")
+                log.info("User cancelled real-partition installation after repartition warning")
                 return
-        self.info.dualboot = dualboot
-        log.debug("dualboot=%s" % dualboot)
+        self.info.install_mode = install_mode
+        log.debug("install_mode=%s" % install_mode)
         self.frontend.stop()
 

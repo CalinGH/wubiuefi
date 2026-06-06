@@ -74,6 +74,8 @@ class WindowsBackend(Backend):
         self.info.drives_dict = dict(drives)
         self.info.efi = self.check_EFI()
         self.info.bitlocker_drives = self.get_bitlocker_drives()
+        self.info.fast_startup_enabled = self.get_fast_startup_enabled()
+        self.info.volume_dirty = self.get_volume_dirty(self.info.system_drive)
 
     def select_target_dir(self):
         target_dir = join_path(self.info.target_drive.path, self.info.distro.installation_dir)
@@ -619,6 +621,43 @@ class WindowsBackend(Backend):
                 bitlocker_drives.add(letter)
         log.debug('BitLocker protected drives = %s' % sorted(bitlocker_drives))
         return bitlocker_drives
+
+    def get_fast_startup_enabled(self):
+        '''
+        Return True when Windows "Fast Startup" (hybrid shutdown) is enabled.
+
+        Fast Startup leaves the NTFS volume in a hibernated/"dirty" state on
+        shutdown, which makes Linux mount it read-only (or risk corruption if it
+        writes). It also interferes with shrinking the Windows partition for a
+        real-partition install. Best-effort: any failure returns False.
+        '''
+        value = registry.get_value(
+            'HKEY_LOCAL_MACHINE',
+            'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power',
+            'HiberbootEnabled')
+        enabled = bool(value)
+        log.debug('fast_startup_enabled=%s (HiberbootEnabled=%r)' % (enabled, value))
+        return enabled
+
+    def get_volume_dirty(self, drive):
+        '''
+        Return True when the given volume's dirty bit is set (``fsutil dirty
+        query``). A dirty volume needs chkdsk before it is safe to resize or
+        mount from Linux. Best-effort: any failure returns False.
+        '''
+        if not drive or not getattr(drive, 'path', None):
+            return False
+        letter = drive.path[:2]
+        try:
+            output = run_command(['fsutil', 'dirty', 'query', letter])
+        except Exception as err:
+            log.info("Could not query dirty bit for %s: %s" % (letter, err))
+            return False
+        # Output is localized but the negative form always contains "NOT".
+        text = (output or '').strip()
+        dirty = bool(text) and 'NOT' not in text.upper()
+        log.debug('volume_dirty(%s)=%s (%r)' % (letter, dirty, text))
+        return dirty
 
     def modify_EFI_folder(self, associated_task,bcdedit):
         command = [bcdedit, '/enum', '{bootmgr}']
