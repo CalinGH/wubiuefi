@@ -214,25 +214,27 @@ class InstallationPage(Page):
             _("Browse for ISO..."))
         self.browse_iso_button.on_click = self.on_browse_iso
 
-        # Installation mode selector: Wubi loop-file, automated real-partition
-        # (subiquity autoinstall), or guided (live installer launched manually).
-        mode_top = h*7 + 44 + 32
+        # Installation mode selector, laid out full-width across the bottom so it
+        # does not overlap the right-hand column (language/username/password).
+        mode_left = h
+        mode_width = self.main.width - 2 * h
+        mode_top = h * 10 + 12
         ui.Label(
             self.main,
-            h + 32 + 10, mode_top, 280, 12,
-            _("Installation type:"))
+            mode_left, mode_top, mode_width, 12,
+            _("Installation type:")).set_font(bold=True)
         self.mode_wubi = ui.RadioButton(
             self.main,
-            h + 32 + 10, mode_top + 14, 310, 18,
-            _("Wubi — Ubuntu inside Windows (no repartitioning, easy to remove)"))
+            mode_left, mode_top + 16, mode_width, 18,
+            _("Wubi: Ubuntu in a file inside Windows (no repartitioning, easy to remove)"))
         self.mode_autoinstall = ui.RadioButton(
             self.main,
-            h + 32 + 10, mode_top + 33, 310, 18,
-            _("Install alongside Windows — real partition (automated, uses Ubuntu installer)"))
+            mode_left, mode_top + 36, mode_width, 18,
+            _("Alongside Windows, automatic: real partition, installed for you"))
         self.mode_guided = ui.RadioButton(
             self.main,
-            h + 32 + 10, mode_top + 52, 310, 18,
-            _("Launch Ubuntu installer manually — real partition (guided)"))
+            mode_left, mode_top + 56, mode_width, 18,
+            _("Alongside Windows, manual: real partition, you use the Ubuntu installer"))
         self.mode_wubi.on_click = self.on_mode_change
         self.mode_autoinstall.on_click = self.on_mode_change
         self.mode_guided.on_click = self.on_mode_change
