@@ -143,18 +143,47 @@ class InstallationPage(Page):
         self.on_size_change()
 
     def populate_distro_list(self):
+        # Map each dropdown label to a concrete Distro. Flavours that ship more
+        # than one selectable version (e.g. Ubuntu) get the version appended so
+        # each release can be picked directly instead of only via "Browse ISO".
+        self.distro_by_label = {}
         if self.info.cd_distro:
-            distros = [self.info.cd_distro.name]
+            candidates = [self.info.cd_distro]
         elif self.info.iso_distro:
-            distros = [self.info.iso_distro.name]
+            candidates = [self.info.iso_distro]
         else:
-            distros = []
-            for distro in self.info.distros:
-                if distro.name not in distros:
-                    distros.append(distro.name)
-        for distro in distros:
-            self.distro_list.add_item(distro)
-        self.distro_list.set_value(distros[0])
+            candidates = list(self.info.distros)
+
+        versions_by_name = {}
+        for distro in candidates:
+            versions_by_name.setdefault(distro.name, set()).add(distro.version or '')
+
+        labels = []
+        for distro in candidates:
+            if distro.version and len(versions_by_name.get(distro.name, ())) > 1:
+                label = "%s %s" % (distro.name, distro.version)
+            else:
+                label = distro.name
+            existing = self.distro_by_label.get(label)
+            if existing is None:
+                self.distro_by_label[label] = distro
+                labels.append(label)
+            elif existing.arch != self.info.arch and distro.arch == self.info.arch:
+                # Prefer the host-arch variant when versions/names collide.
+                self.distro_by_label[label] = distro
+
+        for label in labels:
+            self.distro_list.add_item(label)
+
+        # Default to the newest Ubuntu release rather than the first listed.
+        default_label = labels[0]
+        ubuntu_versions = [
+            (self.distro_by_label[l].version, l)
+            for l in labels
+            if self.distro_by_label[l].name == 'Ubuntu' and self.distro_by_label[l].version]
+        if ubuntu_versions:
+            default_label = max(ubuntu_versions)[1]
+        self.distro_list.set_value(default_label)
         self.on_distro_change()
 
     def populate_language_list(self):
@@ -305,16 +334,18 @@ class InstallationPage(Page):
         return installation_size
 
     def on_distro_change(self):
-        distro_name = str(self.distro_list.get_text())
-        self.info.distro = self.info.distros_dict.get((distro_name.lower(), self.info.arch))
-        # Fall through to i386 if an amd64 version of a particular distribution
-        # does not exist.
-        if not self.info.distro and self.info.arch == 'amd64':
-            self.info.distro = self.info.distros_dict.get((distro_name.lower(), 'i386'))
+        label = str(self.distro_list.get_text())
+        self.info.distro = getattr(self, 'distro_by_label', {}).get(label)
+        if not self.info.distro:
+            # Legacy fall-back: resolve by name/arch (and i386 if no amd64).
+            self.info.distro = self.info.distros_dict.get((label.lower(), self.info.arch))
+            if not self.info.distro and self.info.arch == 'amd64':
+                self.info.distro = self.info.distros_dict.get((label.lower(), 'i386'))
         self.frontend.set_title(_("%s Installer") % self.info.distro.name)
         bmp_file = "%s-header.bmp" % self.info.distro.name
         self.header.image.set_image(os.path.join(str(self.info.image_dir), str(bmp_file)))
-        self.header.title.set_text(_("You are about to install %(distro)s-%(version)s") % dict(distro=self.info.distro.name, version=self.info.version))
+        display_version = self.info.distro.version or self.info.version
+        self.header.title.set_text(_("You are about to install %(distro)s-%(version)s") % dict(distro=self.info.distro.name, version=display_version))
         icon_file = "%s.ico" % self.info.distro.name
         self.frontend.set_icon(os.path.join(str(self.info.image_dir), str(icon_file)))
         if not self.info.skip_memory_check:
@@ -350,9 +381,14 @@ class InstallationPage(Page):
             return
         # Lock the selection to the distro the chosen ISO provides.
         self.info.distro = distro
+        if distro.version:
+            label = "%s %s" % (distro.name, distro.version)
+        else:
+            label = distro.name
+        self.distro_by_label = {label: distro}
         self.distro_list.clear()
-        self.distro_list.add_item(distro.name)
-        self.distro_list.set_value(distro.name)
+        self.distro_list.add_item(label)
+        self.distro_list.set_value(label)
         self.on_distro_change()
         self.frontend.show_info_message(
             _("Wubi will install from the selected ISO:\n%s") % iso_path)
