@@ -81,7 +81,12 @@ def check_real_partition_preconditions(install_mode, resize_free_mb,
     except (TypeError, ValueError):
         required_free_mb = 0.0
     if resize_free_mb < required_free_mb:
-        findings.append((SEVERITY_ERROR, 'insufficient_space', {
+        # Automatic ("alongside") installs let subiquity shrink the Windows
+        # system partition itself, so a shortfall there is fatal. The guided
+        # manual install lets the user pick any disk in the Ubuntu installer, so
+        # it is only a warning they can override.
+        severity = SEVERITY_ERROR if install_mode == 'autoinstall' else SEVERITY_WARNING
+        findings.append((severity, 'insufficient_space', {
             'free_mb': int(resize_free_mb),
             'required_mb': int(required_free_mb),
         }))

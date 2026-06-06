@@ -473,14 +473,26 @@ class InstallationPage(Page):
             if code == 'insufficient_space':
                 free_gb = ctx.get('free_mb', 0) / 1024.0
                 required_gb = ctx.get('required_mb', 0) / 1024.0
-                message = _(
-                    "Not enough free space to install Ubuntu on a real "
-                    "partition alongside Windows.\n\n"
-                    "About %(required).1fGB of free space is needed on your "
-                    "Windows drive, but only %(free).1fGB is free.\n\n"
-                    "Free up space in Windows (empty the Recycle Bin, remove "
-                    "unused programs, run Disk Cleanup) and try again.") % dict(
-                        required=required_gb, free=free_gb)
+                if severity == 'error':
+                    message = _(
+                        "Not enough free space to install Ubuntu on a real "
+                        "partition alongside Windows.\n\n"
+                        "About %(required).1fGB of free space is needed on your "
+                        "Windows drive, but only %(free).1fGB is free.\n\n"
+                        "Free up space in Windows (empty the Recycle Bin, remove "
+                        "unused programs, run Disk Cleanup) and try again.") % dict(
+                            required=required_gb, free=free_gb)
+                else:
+                    message = _(
+                        "Your Windows drive has only about %(free).1fGB free, and "
+                        "roughly %(required).1fGB would be needed to install Ubuntu "
+                        "into the space next to Windows on this drive.\n\n"
+                        "In manual mode this does not have to be the Windows drive: "
+                        "you can continue and, in the Ubuntu installer, choose a "
+                        "different disk (such as a second internal drive or an "
+                        "external SSD) or free space to install onto.\n\n"
+                        "Do you want to continue?") % dict(
+                            required=required_gb, free=free_gb)
             elif code == 'volume_dirty':
                 message = _(
                     "Your Windows drive is marked \"dirty\" and needs to be "

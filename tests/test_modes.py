@@ -87,6 +87,17 @@ class PreconditionTests(unittest.TestCase):
         self.assertEqual(ctx['free_mb'], 1000)
         self.assertEqual(ctx['required_mb'], 12000)
 
+    def test_insufficient_space_guided_is_warning(self):
+        # Guided manual installs let the user pick another disk in the Ubuntu
+        # installer, so a system-drive shortfall is only a warning.
+        findings = check_real_partition_preconditions(
+            'guided', resize_free_mb=1000, required_free_mb=12000,
+            fast_startup_enabled=False)
+        self.assertEqual(len(findings), 1)
+        sev, code, ctx = findings[0]
+        self.assertEqual(sev, SEVERITY_WARNING)
+        self.assertEqual(code, 'insufficient_space')
+
     def test_fast_startup_is_warning(self):
         findings = check_real_partition_preconditions(
             'guided', resize_free_mb=50000, required_free_mb=12000,
